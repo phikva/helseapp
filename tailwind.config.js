@@ -5,7 +5,50 @@ module.exports = {
     "./components/**/*.{js,jsx,ts,tsx}"
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: {
+          Green: '#BCDCC4', // Light green color from your button
+          Black: '#1C1C1E',    // Dark color from your button
+        },
+        text: {
+          DEFAULT: '#000000',
+          secondary: '#3C3C43',
+          white: '#FFFFFF',
+        },
+        background: {
+          DEFAULT: '#FFFFFF',
+          secondary: '#F5F5F5',
+        },
+      },
+      fontSize: {
+        // Display
+        'display-large': ['40px', { lineHeight: '48px' }],
+        'display-medium': ['36px', { lineHeight: '44px' }],
+        'display-small': ['32px', { lineHeight: '40px' }],
+        // Heading
+        'heading-large': ['24px', { lineHeight: '32px' }],
+        'heading-medium': ['20px', { lineHeight: '28px' }],
+        'heading-small': ['18px', { lineHeight: '24px' }],
+        // Body
+        'body-large': ['17px', { lineHeight: '24px' }],
+        'body-medium': ['15px', { lineHeight: '22px' }],
+        'body-small': ['13px', { lineHeight: '20px' }],
+      },
+      fontFamily: {
+        // Headings
+        'heading-bold': ['SharpGrotesk-Bold20'],
+        'heading-medium': ['SharpGrotesk-Medium20'],
+        'heading-book': ['SharpGrotesk-Book20'],
+        // Body text
+        'body': ['Roboto-Regular'],
+        'body-medium': ['Roboto-Medium'],
+        'body-bold': ['Roboto-Bold'],
+      },
+      opacity: {
+        '60': '.6',
+      }
+    },
   },
   plugins: [],
 } 

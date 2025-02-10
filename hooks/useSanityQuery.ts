@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { client } from '@/lib/sanity';
+import type { QueryParams } from '@sanity/client';
 
-export function useSanityQuery<T>(query: string, params?: Record<string, any>) {
+export function useSanityQuery<T>(query: string, params?: QueryParams) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -10,7 +11,7 @@ export function useSanityQuery<T>(query: string, params?: Record<string, any>) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const result = await client.fetch<T>(query, params);
+        const result = await client.fetch<T>(query, params || {});
         setData(result);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('An error occurred'));
