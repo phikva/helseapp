@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native'
 import { router } from 'expo-router'
+import { ArrowRightIcon } from '@/components/Icon'
 
 export default function WelcomeScreen() {
   return (
@@ -10,7 +11,6 @@ export default function WelcomeScreen() {
           {/* Header */}
           <View>
             <Text className="text-display-large font-heading-medium leading-tight text-text mb-4">
-
               Hei og{'\n'}velkommen
             </Text>
           </View>
@@ -18,21 +18,23 @@ export default function WelcomeScreen() {
           {/* Buttons */}
           <View className="space-y-3">
             <TouchableOpacity 
-              className="bg-primary-Green py-[18px] rounded-full"
+              className="bg-primary-Green py-[18px] px-6 rounded-full flex-row items-center justify-between"
               onPress={() => router.push('/(auth)/sign-up')}
             >
-              <Text className="text-center text-text text-body-large font-heading-medium">
+              <Text className="text-text text-body-large font-heading-medium">
                 La oss starte
               </Text>
+              <ArrowRightIcon size={20} color="black" />
             </TouchableOpacity>
 
             <TouchableOpacity 
-              className="bg-primary-Black py-[18px] rounded-full"
+              className="bg-primary-Black py-[18px] px-6 rounded-full flex-row items-center justify-between"
               onPress={() => router.push('/(auth)/sign-in')}
             >
-              <Text className="text-center text-text-white text-body-large font-heading-medium">
+              <Text className="text-text-white text-body-large font-heading-medium">
                 Jeg har allerede en bruker
               </Text>
+              <ArrowRightIcon size={20} color="white" />
             </TouchableOpacity>
           </View>
         </View>
