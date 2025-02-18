@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView, Modal } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, SafeAreaView, Modal, Platform } from 'react-native'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -19,6 +19,12 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false)
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [showSMSModal, setShowSMSModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState({ 
+    title: '', 
+    message: '', 
+    type: 'success' as 'success' | 'error' 
+  })
 
   // Format phone number to E.164 format
   const formatPhoneNumber = (number: string) => {
@@ -42,15 +48,56 @@ export default function SignUpScreen() {
   async function signUp() {
     try {
       setLoading(true)
-      const { error } = await supabase.auth.signUp({
+      
+      // Get the appropriate redirect URL
+      const redirectUrl = __DEV__
+        ? 'helseapp://auth/callback'
+        : 'https://helseapp.vercel.app/auth/callback'
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            // Add any additional user metadata here
+          }
+        }
       })
+      
       if (error) throw error
-      alert('Sjekk e-posten din for bekreftelseslink!')
+
+      console.log('Sign up response:', { data, error })
+
+      if (data?.user?.confirmation_sent_at) {
+        setFeedbackMessage({
+          title: 'Sjekk e-posten din!',
+          message: 'Vi har sendt deg en e-post med en bekreftelseslink. Klikk på lenken i e-posten for å bekrefte kontoen din. Dette kan ta noen minutter.',
+          type: 'success'
+        })
+      } else {
+        setFeedbackMessage({
+          title: 'Noe gikk galt',
+          message: 'Vi kunne ikke sende bekreftelsesmail. Vennligst prøv igjen eller kontakt support.',
+          type: 'error'
+        })
+      }
+      setShowFeedbackModal(true)
     } catch (error) {
-      console.error(error)
-      alert('Feil ved registrering: ' + (error as Error).message)
+      console.error('Sign up error:', error)
+      let errorMessage = (error as Error).message
+      
+      // Handle specific error cases
+      if (errorMessage.includes('User already registered')) {
+        errorMessage = 'Denne e-postadressen er allerede registrert. Vennligst logg inn i stedet.'
+      }
+      
+      setFeedbackMessage({
+        title: 'Registrering mislyktes',
+        message: errorMessage,
+        type: 'error'
+      })
+      setShowFeedbackModal(true)
     } finally {
       setLoading(false)
     }
@@ -70,9 +117,12 @@ export default function SignUpScreen() {
 
       console.log('Email validation passed')
 
-      const redirectUrl = __DEV__ 
-        ? 'exp://10.0.0.7:8081/auth/callback'
-        : 'helseapp://auth/callback'
+      // Get the appropriate redirect URL based on environment
+      const redirectUrl = Platform.select({
+        ios: 'helseapp://auth/callback',
+        android: 'helseapp://auth/callback',
+        default: 'helseapp://auth/callback'
+      })
       
       console.log('Using redirect URL:', redirectUrl)
 
@@ -83,48 +133,83 @@ export default function SignUpScreen() {
         password: tempPassword,
         options: {
           emailRedirectTo: redirectUrl,
+          data: {
+            tempPassword,
+          }
         }
       })
 
       console.log('Sign up response:', { signUpData, signUpError })
 
-      if (signUpError) throw signUpError
+      // If user already exists, send magic link instead
+      if (signUpError?.message.includes('User already registered')) {
+        console.log('User exists, sending magic link')
+        const { error: otpError } = await supabase.auth.signInWithOtp({
+          email: magicLinkEmail,
+          options: {
+            emailRedirectTo: redirectUrl,
+          }
+        })
 
-      // If user is created and confirmed immediately (happens in development)
-      if (signUpData?.user?.confirmed_at) {
-        console.log('User confirmed immediately, redirecting...')
-        router.replace('/(tabs)')
-        return
-      }
-
-      // Then send the OTP for email verification
-      const { data: otpData, error: otpError } = await supabase.auth.signInWithOtp({
-        email: magicLinkEmail,
-        options: {
-          emailRedirectTo: redirectUrl,
+        if (otpError) {
+          if (otpError.message.toLowerCase().includes('rate limit')) {
+            setFeedbackMessage({
+              title: 'Vent litt',
+              message: 'Du må vente 60 sekunder før du kan be om en ny e-post. Dette er for å forhindre spam.',
+              type: 'error'
+            })
+            setShowFeedbackModal(true)
+            return
+          }
+          throw otpError
         }
-      })
 
-      console.log('OTP response:', { otpData, otpError })
-
-      if (otpError) {
-        if (otpError.message.includes('Email rate limit exceeded')) {
-          alert('Du har bedt om for mange innloggingslinker. Vennligst vent litt og prøv igjen.')
+        setFeedbackMessage({
+          title: 'Sjekk e-posten din!',
+          message: 'Vi har sendt deg en innloggingslink. Klikk på lenken i e-posten for å logge inn.',
+          type: 'success'
+        })
+      } else if (signUpError) {
+        if (signUpError.message.toLowerCase().includes('rate limit')) {
+          setFeedbackMessage({
+            title: 'Vent litt',
+            message: 'Du må vente 60 sekunder før du kan be om en ny e-post. Dette er for å forhindre spam.',
+            type: 'error'
+          })
+          setShowFeedbackModal(true)
           return
         }
-        throw otpError
+        // Handle other sign-up errors
+        throw signUpError
+      } else {
+        // New user created successfully
+        setFeedbackMessage({
+          title: 'Sjekk e-posten din!',
+          message: 'Vi har sendt deg en bekreftelseslink. Klikk på lenken i e-posten for å bekrefte kontoen din, deretter kan du logge inn.',
+          type: 'success'
+        })
       }
 
-      alert('Sjekk e-posten din for bekreftelseslink!')
+      setShowFeedbackModal(true)
       setShowEmailModal(false)
     } catch (error) {
       console.error('Error in signUpWithEmail:', error)
       if (error instanceof Error) {
-        if (error.message.includes('Email not confirmed')) {
-          alert('E-posten din er ikke bekreftet. Sjekk innboksen din for en bekreftelseslink.')
+        // Check if it's a rate limit error
+        if (error.message.toLowerCase().includes('rate limit')) {
+          setFeedbackMessage({
+            title: 'Vent litt',
+            message: 'Du må vente 60 sekunder før du kan be om en ny e-post. Dette er for å forhindre spam.',
+            type: 'error'
+          })
         } else {
-          alert('Feil ved registrering: ' + error.message)
+          setFeedbackMessage({
+            title: 'Noe gikk galt',
+            message: error.message,
+            type: 'error'
+          })
         }
+        setShowFeedbackModal(true)
       }
     } finally {
       setLoading(false)
@@ -149,7 +234,18 @@ export default function SignUpScreen() {
 
       console.log('Sign up response:', { signUpData, signUpError })
 
-      if (signUpError) throw signUpError
+      if (signUpError) {
+        if (signUpError.message.includes('User already registered')) {
+          setFeedbackMessage({
+            title: 'Bruker eksisterer',
+            message: 'En bruker med dette telefonnummeret eksisterer allerede. Vennligst logg inn i stedet.',
+            type: 'error'
+          })
+          setShowFeedbackModal(true)
+          return
+        }
+        throw signUpError
+      }
 
       // If user is created and confirmed immediately (happens in development)
       if (signUpData?.user?.confirmed_at) {
@@ -168,22 +264,41 @@ export default function SignUpScreen() {
 
       if (otpError) {
         if (otpError.message.includes('Authentication Error - invalid username')) {
-          alert('SMS-tjenesten er under vedlikehold. Vennligst bruk e-post registrering i mellomtiden.')
+          setFeedbackMessage({
+            title: 'Tjeneste utilgjengelig',
+            message: 'SMS-tjenesten er under vedlikehold. Vennligst bruk e-post registrering i mellomtiden.',
+            type: 'error'
+          })
+          setShowFeedbackModal(true)
           return
         }
         throw otpError
       }
       
-      alert('Sjekk telefonen din for registreringskode!')
+      setFeedbackMessage({
+        title: 'Sjekk telefonen din!',
+        message: 'Vi har sendt deg en registreringskode på SMS. Skriv inn koden for å fullføre registreringen.',
+        type: 'success'
+      })
+      setShowFeedbackModal(true)
       setShowSMSModal(false)
     } catch (error) {
       console.error('Error in signUpWithPhone:', error)
       if (error instanceof Error) {
         if (error.message.includes('Twilio')) {
-          alert('SMS-tjenesten er midlertidig utilgjengelig. Prøv igjen senere eller bruk e-post.')
+          setFeedbackMessage({
+            title: 'Tjeneste utilgjengelig',
+            message: 'SMS-tjenesten er midlertidig utilgjengelig. Prøv igjen senere eller bruk e-post.',
+            type: 'error'
+          })
         } else {
-          alert('Feil ved registrering: ' + error.message)
+          setFeedbackMessage({
+            title: 'Registrering mislyktes',
+            message: error.message,
+            type: 'error'
+          })
         }
+        setShowFeedbackModal(true)
       }
     } finally {
       setLoading(false)
@@ -412,6 +527,41 @@ export default function SignUpScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Feedback Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showFeedbackModal}
+          onRequestClose={() => setShowFeedbackModal(false)}
+        >
+          <View className="flex-1 justify-center items-center bg-black/50">
+            <View className="bg-background m-5 p-6 rounded-3xl w-full max-w-sm">
+              <View className="items-center mb-4">
+                <View className={`w-16 h-16 ${feedbackMessage.type === 'success' ? 'bg-primary-Green' : 'bg-red-500'} rounded-full items-center justify-center mb-4`}>
+                  <Text className="text-[32px]">
+                    {feedbackMessage.type === 'success' ? '✓' : '!'}
+                  </Text>
+                </View>
+                <Text className="text-display-small font-heading-medium text-text text-center">
+                  {feedbackMessage.title}
+                </Text>
+                <Text className="text-body-large font-body text-text-secondary text-center mt-2">
+                  {feedbackMessage.message}
+                </Text>
+              </View>
+
+              <TouchableOpacity 
+                className={`${feedbackMessage.type === 'success' ? 'bg-primary-Green' : 'bg-red-500'} py-[14px] rounded-full`}
+                onPress={() => setShowFeedbackModal(false)}
+              >
+                <Text className="text-center text-text text-body-large font-heading-medium">
+                  {feedbackMessage.type === 'success' ? 'OK, jeg forstår' : 'Prøv igjen'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>

@@ -1,69 +1,42 @@
-import { Image, StyleSheet, Platform, View, Text, FlatList } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useSanityQuery } from '@/hooks/useSanityQuery';
-import { Post } from '@/types/sanity';
+import { HelloWave } from '@/components/HelloWave';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomeScreen() {
-  const { data: posts, loading, error } = useSanityQuery<Post[]>(`
-    *[_type == "post"] {
-      _id,
-      title,
-      slug,
-      mainImage,
-      publishedAt
-    }
-  `);
-
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <Text>Error: {error.message}</Text>
-      </View>
-    );
-  }
+  const { signOut } = useAuth();
 
   return (
-    <View className="flex-1">
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => (
-          <View className="p-4 border-b border-gray-200">
-            <Text className="text-lg font-bold">{item.title}</Text>
-          </View>
-        )}
-      />
-    </View>
+    <ThemedView className="flex-1 p-4">
+      <View className="flex-row items-center gap-2 mb-4">
+        <ThemedText type="title">Velkommen</ThemedText>
+        <HelloWave />
+      </View>
+      
+      <ThemedText className="text-lg mb-4">
+        Du er nå logget inn i appen!
+      </ThemedText>
+      
+      <ThemedText className="mb-8">
+        Her kommer det snart mer innhold.
+      </ThemedText>
+
+      <TouchableOpacity 
+        onPress={signOut}
+        className="bg-red-500 p-4 rounded-lg"
+      >
+        <ThemedText className="text-white text-center font-bold">
+          Logg ut
+        </ThemedText>
+      </TouchableOpacity>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    padding: 16,
   },
 });
