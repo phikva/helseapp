@@ -522,9 +522,9 @@ export default function SignUpScreen() {
 
         {/* Footer */}
         <View className="absolute bottom-6 left-0 right-0">
-          <TouchableOpacity onPress={() => {/* Handle terms */}}>
-            <Text className="text-center text-body-medium text-text-secondary/60 font-body underline">
-              Vilkår & betingelser
+          <TouchableOpacity onPress={() => router.push('/(auth)/sign-in')}>
+            <Text className="text-center text-body-medium text-text-secondary font-body">
+              Allerede registrert? <Text className="text-primary-Black">Logg inn her</Text>
             </Text>
           </TouchableOpacity>
         </View>

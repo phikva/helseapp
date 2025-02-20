@@ -1,14 +1,30 @@
 import { Redirect } from 'expo-router'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/lib/store/authStore'
 
 export default function Index() {
-  const { session, isLoading } = useAuth()
+  const { session, isLoading, hasProfile } = useAuthStore()
 
-  if (isLoading) return null
+  console.log('Root Index - Auth State:', { session, isLoading, hasProfile });
 
-  if (!session) {
-    return <Redirect href="/(auth)/welcome" />
+  // If loading, don't return null - instead redirect to auth flow
+  if (isLoading) {
+    console.log('Root Index - Loading, redirecting to auth');
+    return <Redirect href="/(auth)" />;
   }
 
-  return <Redirect href="/(tabs)" />
+  // If logged in but no profile, go to profile setup
+  if (session && !hasProfile) {
+    console.log('Root Index - Redirecting to profile setup');
+    return <Redirect href="/(auth)/profile-setup" />;
+  }
+
+  // If logged in and has profile, go to main app
+  if (session) {
+    console.log('Root Index - Redirecting to tabs');
+    return <Redirect href="/(tabs)" />;
+  }
+
+  // Not logged in, show onboarding
+  console.log('Root Index - Redirecting to auth/onboarding');
+  return <Redirect href="/(auth)" />;
 } 

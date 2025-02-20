@@ -5,9 +5,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-import { useColorScheme } from 'react-native';
-import { AuthProvider } from '@/contexts/AuthContext'
+import { useColorScheme, View } from 'react-native';
 import * as Linking from 'expo-linking';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useInitAuth } from '@/hooks/useInitAuth';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -15,6 +16,10 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
+
+  // Initialize auth state
+  useInitAuth();
+
   const [loaded] = useFonts({
     // Sharp Grotesk for headings
     'SharpGrotesk-Bold20': require('../assets/fonts/SharpGrotesk-Bold20.ttf'),
@@ -41,7 +46,6 @@ export default function RootLayout() {
     const handleDeepLink = (event: { url: string }) => {
       console.log('Deep link received:', event.url);
       
-      // Handle both development and production URLs
       if (
         event.url.includes('auth/callback') || 
         event.url.includes('auth/v1/callback') ||
@@ -55,10 +59,8 @@ export default function RootLayout() {
       }
     };
 
-    // Add event listener for deep links while app is running
     Linking.addEventListener('url', handleDeepLink);
 
-    // Check for initial URL (app opened via deep link)
     Linking.getInitialURL().then((url) => {
       if (url) {
         console.log('Initial URL:', url);
@@ -77,8 +79,7 @@ export default function RootLayout() {
     });
 
     return () => {
-      // Clean up
-      // Note: The cleanup is handled automatically by the new API
+      // Clean up is handled automatically
     };
   }, [router]);
 
@@ -87,15 +88,22 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#fff' },
+            }}
+          >
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
+          </Stack>
+          <StatusBar style="dark" />
+        </ThemeProvider>
+      </View>
+    </GestureHandlerRootView>
   );
 }

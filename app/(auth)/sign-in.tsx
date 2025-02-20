@@ -41,6 +41,83 @@ export default function SignInScreen() {
     return phoneRegex.test(number)
   }
 
+  async function verifyDatabaseSetup() {
+    try {
+      // Check if profiles table exists and we can access it
+      const { error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+
+      if (error) {
+        console.error('Database setup error:', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error verifying database setup:', error);
+      return false;
+    }
+  }
+
+  async function checkProfileAndRedirect() {
+    try {
+      // First verify database setup
+      const isDbSetup = await verifyDatabaseSetup();
+      if (!isDbSetup) {
+        console.error('Database not properly set up');
+        router.replace('/(auth)/profile-setup');
+        return;
+      }
+
+      const session = await supabase.auth.getSession();
+      const userId = session.data.session?.user.id;
+      
+      console.log('Checking profile for user:', userId);
+      
+      if (!userId) {
+        console.log('No user ID found in session');
+        router.replace('/(auth)/profile-setup');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId);
+
+      console.log('Profile query result:', { data, error });
+
+      // Handle specific Postgrest error for no rows
+      if (error?.code === 'PGRST116') {
+        console.log('No profile found, redirecting to setup');
+        router.replace('/(auth)/profile-setup');
+        return;
+      }
+
+      // Handle other errors
+      if (error) {
+        console.error('Database error:', error);
+        router.replace('/(auth)/profile-setup');
+        return;
+      }
+
+      // Check if we have any data
+      if (!data || data.length === 0) {
+        console.log('No profile data found, redirecting to setup');
+        router.replace('/(auth)/profile-setup');
+        return;
+      }
+
+      console.log('Profile found, redirecting to tabs');
+      router.replace('/(tabs)');
+      
+    } catch (error) {
+      console.error('Unexpected error checking profile:', error);
+      router.replace('/(auth)/profile-setup');
+    }
+  }
+
   async function signIn() {
     try {
       setLoading(true)
@@ -49,6 +126,9 @@ export default function SignInScreen() {
         password,
       })
       if (error) throw error
+      
+      // Check profile and redirect accordingly
+      await checkProfileAndRedirect();
     } catch (error) {
       console.error(error)
       alert('Feil ved innlogging: ' + (error as Error).message)
@@ -192,10 +272,9 @@ export default function SignInScreen() {
         throw error
       }
 
-      // Verification successful
+      // Verification successful, check profile and redirect
       setShowVerificationModal(false)
-      // The session will be automatically updated by Supabase
-      router.replace('/(tabs)')
+      await checkProfileAndRedirect();
     } catch (error) {
       console.error('Error in verifyPhoneNumber:', error)
       if (error instanceof Error) {
@@ -533,9 +612,9 @@ export default function SignInScreen() {
 
         {/* Footer */}
         <View className="absolute bottom-6 left-0 right-0">
-          <TouchableOpacity onPress={() => {/* Handle terms */}}>
-            <Text className="text-center text-body-medium text-text-secondary/60 font-body underline">
-              Vilkår & betingelser
+          <TouchableOpacity onPress={() => router.push('/(auth)/sign-up')}>
+            <Text className="text-center text-body-medium text-text-secondary font-body">
+              Ikke registrert? <Text className="text-primary-Black">Registrer deg her</Text>
             </Text>
           </TouchableOpacity>
         </View>
