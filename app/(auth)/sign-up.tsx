@@ -10,15 +10,25 @@ import {
   AppleIcon,
   FacebookIcon
 } from '@/components/Icon'
+import {
+  EmailPasswordForm,
+  AlternativeSignInMethods,
+  EmailVerificationModal,
+  PhoneVerificationModal,
+  SMSSignUpModal,
+  FeedbackModal
+} from '@/components/auth'
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('')
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [showSMSModal, setShowSMSModal] = useState(false)
+  const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState({ 
     title: '', 
@@ -31,18 +41,30 @@ export default function SignUpScreen() {
     // Remove all non-digit characters
     const cleaned = number.replace(/\D/g, '')
     
-    // Add Norwegian country code if not present
-    if (cleaned.startsWith('47')) {
-      return '+' + cleaned
+    // Remove leading zeros if present
+    const withoutLeadingZeros = cleaned.replace(/^0+/, '')
+    
+    // If the number starts with 47, ensure it's not duplicated
+    if (withoutLeadingZeros.startsWith('47')) {
+      return withoutLeadingZeros // Return without + for Supabase
     } else {
-      return '+47' + cleaned
+      return '47' + withoutLeadingZeros // Return without + for Supabase
     }
+  }
+
+  // Format phone number for display
+  const formatPhoneNumberForDisplay = (number: string) => {
+    const formatted = formatPhoneNumber(number)
+    return '+' + formatted
   }
 
   // Validate phone number
   const isValidPhoneNumber = (number: string) => {
-    const phoneRegex = /^\+47[2-9]\d{7}$/
-    return phoneRegex.test(number)
+    // E.164 format for Norwegian numbers: 47 followed by 8 digits (no + prefix for Supabase)
+    const phoneRegex = /^47[2-9]\d{7}$/
+    const isValid = phoneRegex.test(number)
+    console.log('Phone validation:', { number, isValid }) // Add logging
+    return isValid
   }
 
   async function signUp() {
@@ -216,10 +238,71 @@ export default function SignUpScreen() {
     }
   }
 
+  async function verifyPhoneNumber() {
+    try {
+      setLoading(true)
+      const formattedNumber = formatPhoneNumber(phoneNumber)
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: formattedNumber, // No + prefix as per Supabase requirements
+        token: verificationCode,
+        type: 'sms'
+      })
+
+      if (error) {
+        if (error.message.includes('Invalid token')) {
+          setFeedbackMessage({
+            title: 'Feil kode',
+            message: 'Koden du skrev inn er ugyldig. Vennligst prøv igjen.',
+            type: 'error'
+          })
+        } else {
+          throw error
+        }
+        setShowFeedbackModal(true)
+        return
+      }
+
+      // Verification successful
+      setFeedbackMessage({
+        title: 'Registrering vellykket!',
+        message: 'Din konto er nå bekreftet. Du vil bli videresendt til appen.',
+        type: 'success'
+      })
+      setShowFeedbackModal(true)
+      setShowVerificationModal(false)
+
+      // Wait a bit before redirecting to show the success message
+      setTimeout(() => {
+        router.replace('/(tabs)')
+      }, 2000)
+
+    } catch (error) {
+      console.error('Error in verifyPhoneNumber:', error)
+      setFeedbackMessage({
+        title: 'Verifisering mislyktes',
+        message: error instanceof Error ? error.message : 'En ukjent feil oppstod',
+        type: 'error'
+      })
+      setShowFeedbackModal(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Update signUpWithPhone to show verification modal after sending OTP
   async function signUpWithPhone() {
     try {
       setLoading(true)
       const formattedNumber = formatPhoneNumber(phoneNumber)
+      const displayNumber = formatPhoneNumberForDisplay(phoneNumber)
+      
+      console.log('Attempting phone signup with:', { 
+        rawNumber: phoneNumber,
+        formattedNumber,
+        displayNumber,
+        isValid: isValidPhoneNumber(formattedNumber)
+      })
       
       if (!isValidPhoneNumber(formattedNumber)) {
         throw new Error('Ugyldig telefonnummer. Bruk format: XXX XX XXX')
@@ -227,6 +310,8 @@ export default function SignUpScreen() {
 
       // First create the user with a random password
       const tempPassword = Math.random().toString(36).slice(-8)
+      console.log('Creating user with phone:', { formattedNumber })
+      
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         phone: formattedNumber,
         password: tempPassword,
@@ -236,52 +321,20 @@ export default function SignUpScreen() {
 
       if (signUpError) {
         if (signUpError.message.includes('User already registered')) {
-          setFeedbackMessage({
-            title: 'Bruker eksisterer',
-            message: 'En bruker med dette telefonnummeret eksisterer allerede. Vennligst logg inn i stedet.',
-            type: 'error'
-          })
-          setShowFeedbackModal(true)
+          console.log('User exists, sending OTP')
+          // If user exists, just send the OTP
+          await sendOTP(formattedNumber)
           return
         }
         throw signUpError
       }
 
-      // If user is created and confirmed immediately (happens in development)
-      if (signUpData?.user?.confirmed_at) {
-        console.log('User confirmed immediately, redirecting...')
-        router.replace('/(tabs)')
-        return
-      }
-
-      // Then send the OTP for phone verification
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        phone: formattedNumber,
-        options: {
-          channel: 'sms',
-        }
-      })
-
-      if (otpError) {
-        if (otpError.message.includes('Authentication Error - invalid username')) {
-          setFeedbackMessage({
-            title: 'Tjeneste utilgjengelig',
-            message: 'SMS-tjenesten er under vedlikehold. Vennligst bruk e-post registrering i mellomtiden.',
-            type: 'error'
-          })
-          setShowFeedbackModal(true)
-          return
-        }
-        throw otpError
-      }
+      // Wait 5 seconds before sending OTP for new user
+      console.log('Waiting 5 seconds before sending OTP...')
+      await new Promise(resolve => setTimeout(resolve, 5000))
       
-      setFeedbackMessage({
-        title: 'Sjekk telefonen din!',
-        message: 'Vi har sendt deg en registreringskode på SMS. Skriv inn koden for å fullføre registreringen.',
-        type: 'success'
-      })
-      setShowFeedbackModal(true)
-      setShowSMSModal(false)
+      await sendOTP(formattedNumber)
+
     } catch (error) {
       console.error('Error in signUpWithPhone:', error)
       if (error instanceof Error) {
@@ -291,9 +344,74 @@ export default function SignUpScreen() {
             message: 'SMS-tjenesten er midlertidig utilgjengelig. Prøv igjen senere eller bruk e-post.',
             type: 'error'
           })
+        } else if (error.message.includes('invalid username')) {
+          setFeedbackMessage({
+            title: 'Ugyldig telefonnummer',
+            message: 'Telefonnummeret er ikke i riktig format eller er ikke registrert for testing. Vennligst kontakt support.',
+            type: 'error'
+          })
+        } else if (error.message.toLowerCase().includes('security purposes') || error.message.toLowerCase().includes('rate limit')) {
+          setFeedbackMessage({
+            title: 'Vent litt',
+            message: 'Vennligst vent noen sekunder før du prøver igjen.',
+            type: 'error'
+          })
         } else {
           setFeedbackMessage({
             title: 'Registrering mislyktes',
+            message: error.message,
+            type: 'error'
+          })
+        }
+        setShowFeedbackModal(true)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Separate function to handle OTP sending
+  async function sendOTP(phoneNumber: string) {
+    console.log('Sending OTP to:', phoneNumber)
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      phone: phoneNumber,
+      options: { channel: 'sms' }
+    })
+
+    if (otpError) {
+      console.error('OTP error:', otpError)
+      throw otpError
+    }
+
+    setVerificationCode('')
+    setShowVerificationModal(true)
+    setShowSMSModal(false)
+    setFeedbackMessage({
+      title: 'Kode sendt!',
+      message: 'Vi har sendt deg en verifiseringskode på SMS.',
+      type: 'success'
+    })
+    setShowFeedbackModal(true)
+  }
+
+  // Update the resend code function in the verification modal
+  async function handleResendCode() {
+    try {
+      setLoading(true)
+      const formattedNumber = formatPhoneNumber(phoneNumber)
+      await sendOTP(formattedNumber)
+    } catch (error) {
+      console.error('Error resending code:', error)
+      if (error instanceof Error) {
+        if (error.message.toLowerCase().includes('security purposes') || error.message.toLowerCase().includes('rate limit')) {
+          setFeedbackMessage({
+            title: 'Vent litt',
+            message: 'Du må vente noen sekunder før du kan be om en ny kode.',
+            type: 'error'
+          })
+        } else {
+          setFeedbackMessage({
+            title: 'Kunne ikke sende ny kode',
             message: error.message,
             type: 'error'
           })
@@ -338,233 +456,69 @@ export default function SignUpScreen() {
           </Text>
         </View>
 
-        {/* Form */}
-        <View className="space-y-4">
-          <View className="bg-background-secondary rounded-2xl px-4 py-[14px] flex-row items-center">
-            <EnvelopeIcon size={20} color="#3C3C43" />
-            <TextInput
-              className="flex-1 text-body-large font-body ml-2"
-              placeholder="Din e-post"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </View>
+        {/* Email/Password Form */}
+        <EmailPasswordForm
+          email={email}
+          password={password}
+          onEmailChange={setEmail}
+          onPasswordChange={setPassword}
+          onSubmit={signUp}
+          loading={loading}
+          submitText="Registrer"
+        />
 
-          <View className="bg-background-secondary rounded-2xl px-4 py-[14px] flex-row items-center">
-            <LockClosedIcon size={20} color="#3C3C43" />
-            <TextInput
-              className="flex-1 text-body-large font-body ml-2"
-              placeholder="Ditt passord"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
+        {/* Alternative Sign-in Methods */}
+        <AlternativeSignInMethods
+          onEmailPress={() => setShowEmailModal(true)}
+          onGooglePress={() => {/* Handle Google sign-in */}}
+          onSMSPress={() => setShowSMSModal(true)}
+          loading={loading}
+          isSignUp
+        />
 
-          {/* Register Button */}
-          <TouchableOpacity 
-            className="bg-primary-Green py-[18px] px-6 rounded-full flex-row items-center justify-between"
-            onPress={signUp}
-            disabled={loading || !email || !password}
-          >
-            <Text className="text-text text-body-large font-heading-medium">
-              {loading ? 'Registrerer...' : 'Registrer'}
-            </Text>
-            <ArrowRightIcon size={20} color="black" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Alternative Sign Up Methods */}
-        <View className="mt-8">
-          <View className="flex-row items-center mb-6">
-            <View className="flex-1 h-[1px] bg-text-secondary/10" />
-            <Text className="mx-4 text-body-medium font-body text-text-secondary">
-              Eller
-            </Text>
-            <View className="flex-1 h-[1px] bg-text-secondary/10" />
-          </View>
-
-          <View className="space-y-3">
-            {/* Email Magic Link */}
-            <TouchableOpacity 
-              className="bg-background-secondary py-[14px] px-6 rounded-full flex-row items-center justify-between"
-              onPress={() => setShowEmailModal(true)}
-              disabled={loading}
-            >
-              <View className="flex-row items-center">
-                <EnvelopeIcon size={20} color="#3C3C43" />
-                <Text className="text-text text-body-large font-heading-medium ml-2">
-                  Få registreringslink på e-post
-                </Text>
-              </View>
-              <ArrowRightIcon size={20} color="#3C3C43" />
-            </TouchableOpacity>
-
-            {/* Google Sign Up */}
-            <TouchableOpacity className="bg-background-secondary py-[14px] px-6 rounded-full flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <GoogleIcon size={20} color="#3C3C43" />
-                <Text className="text-text text-body-large font-heading-medium ml-2">
-                  Fortsett med Google
-                </Text>
-              </View>
-              <ArrowRightIcon size={20} color="#3C3C43" />
-            </TouchableOpacity>
-
-            {/* SMS Sign Up Button */}
-            <TouchableOpacity 
-              className="bg-background-secondary py-[14px] px-6 rounded-full flex-row items-center justify-between"
-              onPress={() => setShowSMSModal(true)}
-              disabled={loading}
-            >
-              <View className="flex-row items-center">
-                <Text className="text-text text-body-large font-heading-medium">
-                  Få registreringskode på SMS
-                </Text>
-              </View>
-              <ArrowRightIcon size={20} color="#3C3C43" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Email Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
+        {/* Email Verification Modal */}
+        <EmailVerificationModal
           visible={showEmailModal}
-          onRequestClose={() => setShowEmailModal(false)}
-        >
-          <View className="flex-1 justify-center items-center bg-black/50">
-            <View className="bg-background m-5 p-6 rounded-3xl w-full max-w-sm">
-              <Text className="text-display-small font-heading-medium mb-6 text-text">
-                Få registreringslink
-              </Text>
-              
-              <View className="bg-background-secondary rounded-2xl px-4 py-[14px] flex-row items-center mb-4">
-                <EnvelopeIcon size={20} color="#3C3C43" />
-                <TextInput
-                  className="flex-1 text-body-large font-body ml-2"
-                  placeholder="Din e-post"
-                  value={magicLinkEmail}
-                  onChangeText={setMagicLinkEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                />
-              </View>
+          onClose={() => setShowEmailModal(false)}
+          email={magicLinkEmail}
+          onEmailChange={setMagicLinkEmail}
+          onSubmit={signUpWithEmail}
+          loading={loading}
+        />
 
-              <View className="flex-row space-x-3">
-                <TouchableOpacity 
-                  className="flex-1 bg-text-secondary/10 py-[14px] rounded-full"
-                  onPress={() => setShowEmailModal(false)}
-                >
-                  <Text className="text-center text-text text-body-large font-heading-medium">
-                    Avbryt
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  className="flex-1 bg-primary-Black py-[14px] rounded-full"
-                  onPress={signUpWithEmail}
-                  disabled={loading || !magicLinkEmail}
-                >
-                  <Text className="text-center text-white text-body-large font-heading-medium">
-                    {loading ? 'Sender...' : 'Send link'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* SMS Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
+        {/* SMS Sign Up Modal */}
+        <SMSSignUpModal
           visible={showSMSModal}
-          onRequestClose={() => setShowSMSModal(false)}
-        >
-          <View className="flex-1 justify-center items-center bg-black/50">
-            <View className="bg-background m-5 p-6 rounded-3xl w-full max-w-sm">
-              <Text className="text-display-small font-heading-medium mb-6 text-text">
-                Få registreringskode
-              </Text>
-              
-              <View className="bg-background-secondary rounded-2xl px-4 py-[14px] flex-row items-center mb-4">
-                <Text className="text-text-secondary mr-2">+47</Text>
-                <TextInput
-                  className="flex-1 text-body-large font-body"
-                  placeholder="XXX XX XXX"
-                  value={phoneNumber}
-                  onChangeText={handlePhoneNumberChange}
-                  keyboardType="phone-pad"
-                />
-              </View>
+          onClose={() => setShowSMSModal(false)}
+          phoneNumber={phoneNumber}
+          onPhoneNumberChange={handlePhoneNumberChange}
+          onSubmit={() => {
+            signUpWithPhone()
+            if (!loading) setShowSMSModal(false)
+          }}
+          loading={loading}
+        />
 
-              <View className="flex-row space-x-3">
-                <TouchableOpacity 
-                  className="flex-1 bg-text-secondary/10 py-[14px] rounded-full"
-                  onPress={() => setShowSMSModal(false)}
-                >
-                  <Text className="text-center text-text text-body-large font-heading-medium">
-                    Avbryt
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  className="flex-1 bg-primary-Black py-[14px] rounded-full"
-                  onPress={() => {
-                    signUpWithPhone()
-                    if (!loading) setShowSMSModal(false)
-                  }}
-                  disabled={loading || !phoneNumber || phoneNumber.replace(/\D/g, '').length < 8}
-                >
-                  <Text className="text-center text-white text-body-large font-heading-medium">
-                    {loading ? 'Sender...' : 'Send kode'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {/* Phone Verification Modal */}
+        <PhoneVerificationModal
+          visible={showVerificationModal}
+          onClose={() => setShowVerificationModal(false)}
+          phoneNumber={phoneNumber}
+          verificationCode={verificationCode}
+          onVerificationCodeChange={setVerificationCode}
+          onSubmit={verifyPhoneNumber}
+          onResendCode={handleResendCode}
+          loading={loading}
+        />
 
         {/* Feedback Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
+        <FeedbackModal
           visible={showFeedbackModal}
-          onRequestClose={() => setShowFeedbackModal(false)}
-        >
-          <View className="flex-1 justify-center items-center bg-black/50">
-            <View className="bg-background m-5 p-6 rounded-3xl w-full max-w-sm">
-              <View className="items-center mb-4">
-                <View className={`w-16 h-16 ${feedbackMessage.type === 'success' ? 'bg-primary-Green' : 'bg-red-500'} rounded-full items-center justify-center mb-4`}>
-                  <Text className="text-[32px]">
-                    {feedbackMessage.type === 'success' ? '✓' : '!'}
-                  </Text>
-                </View>
-                <Text className="text-display-small font-heading-medium text-text text-center">
-                  {feedbackMessage.title}
-                </Text>
-                <Text className="text-body-large font-body text-text-secondary text-center mt-2">
-                  {feedbackMessage.message}
-                </Text>
-              </View>
-
-              <TouchableOpacity 
-                className={`${feedbackMessage.type === 'success' ? 'bg-primary-Green' : 'bg-red-500'} py-[14px] rounded-full`}
-                onPress={() => setShowFeedbackModal(false)}
-              >
-                <Text className="text-center text-text text-body-large font-heading-medium">
-                  {feedbackMessage.type === 'success' ? 'OK, jeg forstår' : 'Prøv igjen'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setShowFeedbackModal(false)}
+          title={feedbackMessage.title}
+          message={feedbackMessage.message}
+          type={feedbackMessage.type}
+        />
 
         {/* Footer */}
         <View className="absolute bottom-6 left-0 right-0">
