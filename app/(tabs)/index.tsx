@@ -1,9 +1,9 @@
 import { StyleSheet, View, TouchableOpacity, SafeAreaView, Text, ScrollView, useWindowDimensions } from 'react-native';
-import { HelloWave } from '@/components/HelloWave';
-import { useAuthStore } from '@/lib/store/authStore';
+import { HelloWave } from '@components/HelloWave';
+import { useAuthStore } from '@store/authStore';
 import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { TopHeader } from '@/components/ui/TopHeader';
+import { TopHeader } from '@components/ui/TopHeader';
 
 // Pagination component
 const PaginationDots = ({ total, current }: { total: number; current: number }) => (
@@ -46,7 +46,7 @@ export default function HomeScreen() {
 
           {/* Weekly Plan Carousel */}
           <View className="mt-4">
-            <Text className="text-base text-text-secondary">Sett opp din ukesplan</Text>
+            <Text className="body-regular text-lg text-text-secondary">Sett opp din ukesplan</Text>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -70,6 +70,8 @@ export default function HomeScreen() {
           {/* Recipes Carousel */}
           <View className="mt-6">
             <Text className="text-3xl font-heading-medium mb-2">Trenger du inspirasjon?</Text>
+            <Text className="body-regular text-lg text-text-secondary mb-2">Bli inspirert av disse oppskriftene</Text>
+
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -92,7 +94,7 @@ export default function HomeScreen() {
           {/* Food Recipes Carousel */}
           <View className="mt-6 mb-6">
             <Text className="text-3xl font-heading-medium mb-2">Matoppskrifter</Text>
-            <Text className="text-sm text-text-secondary mb-2">Dine matoppskrifter</Text>
+            <Text className="body-regular text-lg text-text-secondary mb-2">Dine matoppskrifter</Text>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}

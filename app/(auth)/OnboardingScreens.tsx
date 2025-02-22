@@ -1,41 +1,71 @@
-import { View, Text, Dimensions, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { useState } from 'react';
+import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { ArrowRightIcon } from '@components/Icon';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring,
+  withTiming,
+  runOnJS 
+} from 'react-native-reanimated';
+import { SWIPE_ANIMATION } from '@constants/animations';
+import { buttonStyles, layout } from '@lib/theme';
+import { client } from '@lib/sanity';
+import { getOnboardingConfig } from '@lib/queries/onboarding';
+import { SanityImageComponent } from '@components/SanityImage';
 
 const { width } = Dimensions.get('window');
 
-interface OnboardingItem {
+interface OnboardingScreen {
+  _id: string;
   title: string;
   description: string;
-  image: any;
+  imageUrl: string;
+  isActive: boolean;
 }
 
-const onboardingData: OnboardingItem[] = [
-  {
-    title: 'Oppdag nye oppskrifter',
-    description: 'Få tilgang til et bredt utvalg av oppskrifter og lagre dine favoritter for enkel tilgang.',
-    image: require('../../assets/images/undraw_breakfast_rgx5.png')
-  },
-  {
-    title: 'Planlegg måltidene dine',
-    description: 'Planlegg ukens og månedens måltider enkelt. Aldri mer stress med "hva skal vi spise i dag?"',
-    image: require('../../assets/images/undraw_hamburger_falh.png')
-  },
-  {
-    title: 'Tilpass og lagre',
-    description: 'Lag og lagre dine egne oppskrifter, og tilpass eksisterende oppskrifter etter dine preferanser.',
-    image: require('../../assets/images/undraw_online-groceries_n03y.png')
-  }
-];
+interface OnboardingConfig {
+  name: string;
+  isEnabled: boolean;
+  screens: OnboardingScreen[];
+}
 
 export default function OnboardingScreens({ onComplete }: { onComplete: () => void }) {
-  console.log('Rendering OnboardingScreens component');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [imageError, setImageError] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [onboardingData, setOnboardingData] = useState<OnboardingConfig | null>(null);
+  const translateX = useSharedValue(0);
+
+  // Fetch onboarding data
+  useEffect(() => {
+    async function fetchOnboardingData() {
+      try {
+        const data = await client.fetch<OnboardingConfig>(getOnboardingConfig);
+        if (data && data.screens) {
+          const activeScreens = data.screens.filter((screen: OnboardingScreen) => screen.isActive);
+          setOnboardingData({ ...data, screens: activeScreens });
+        }
+      } catch (error) {
+        console.error('Failed to fetch onboarding data:', error);
+      }
+    }
+
+    fetchOnboardingData();
+  }, []);
+
+  // Handle empty onboarding data
+  useEffect(() => {
+    if (onboardingData === null) return; // Still loading
+    if (!onboardingData.screens.length) {
+      onComplete();
+    }
+  }, [onboardingData, onComplete]);
 
   const handleNext = () => {
-    console.log('Handling next, current index:', currentIndex);
-    if (currentIndex < onboardingData.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (!onboardingData?.screens) return;
+    if (currentIndex < onboardingData.screens.length - 1) {
+      handleSwipeComplete('left');
     } else {
       onComplete();
     }
@@ -43,172 +73,157 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
 
   const handleBack = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      handleSwipeComplete('right');
     }
   };
 
-  const handleImageError = () => {
-    console.error('Failed to load image:', onboardingData[currentIndex].image);
-    setImageError(true);
+  const updateIndex = (newIndex: number) => {
+    setCurrentIndex(newIndex);
+    setIsTransitioning(false);
   };
 
+  const handleSwipeComplete = (direction: 'left' | 'right') => {
+    if (!onboardingData?.screens) return;
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+
+    const newIndex = direction === 'left' ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex < 0 || newIndex >= onboardingData.screens.length) {
+      setIsTransitioning(false);
+      translateX.value = withSpring(0, SWIPE_ANIMATION.SPRING_CONFIG);
+      return;
+    }
+
+    const moveValue = direction === 'left' ? -width : width;
+    translateX.value = withTiming(moveValue, SWIPE_ANIMATION.TIMING_CONFIG, () => {
+      translateX.value = -moveValue;
+      runOnJS(updateIndex)(newIndex);
+      translateX.value = withSpring(0, SWIPE_ANIMATION.SPRING_CONFIG);
+    });
+  };
+
+  const gesture = Gesture.Pan()
+    .onBegin(() => {
+      if (isTransitioning) return;
+    })
+    .onUpdate((event) => {
+      if (!isTransitioning) {
+        translateX.value = event.translationX;
+      }
+    })
+    .onEnd((event) => {
+      if (!onboardingData?.screens) return;
+      if (isTransitioning) return;
+
+      if (Math.abs(event.translationX) > SWIPE_ANIMATION.THRESHOLD) {
+        if (event.translationX > 0 && currentIndex > 0) {
+          runOnJS(handleSwipeComplete)('right');
+        } else if (event.translationX < 0 && currentIndex < onboardingData.screens.length - 1) {
+          runOnJS(handleSwipeComplete)('left');
+        } else {
+          translateX.value = withSpring(0, SWIPE_ANIMATION.SPRING_CONFIG);
+        }
+      } else {
+        translateX.value = withSpring(0, SWIPE_ANIMATION.SPRING_CONFIG);
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+    };
+  });
+
+  // Early return for loading or no data
+  if (!onboardingData?.screens?.length) {
+    return null;
+  }
+
+  const currentScreen = onboardingData.screens[currentIndex];
+
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
+    <View className="flex-1 bg-white">
+      <View className="flex-1">
         {/* Header navigation */}
-        <View style={styles.header}>
+        <View className={`flex-row justify-between items-center ${layout.padding.default} pt-5`}>
           {currentIndex > 0 ? (
             <TouchableOpacity 
               onPress={handleBack}
-              style={styles.headerButton}
+              className={buttonStyles.transparent.base}
+              disabled={isTransitioning}
             >
-              <Text style={styles.headerText}>
+              <Text className={buttonStyles.transparent.text}>
                 Tilbake
               </Text>
             </TouchableOpacity>
           ) : (
-            <View style={{ width: 80 }} />
+            <View className="w-[80px]" />
           )}
           <TouchableOpacity 
             onPress={onComplete}
-            style={styles.headerButton}
+            className={buttonStyles.transparent.base}
+            disabled={isTransitioning}
           >
-            <Text style={styles.headerText}>
+            <Text className={buttonStyles.transparent.text}>
               Hopp over
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Content */}
-        <View style={styles.mainContent}>
-          {/* Image Component */}
-          <View style={styles.imageContainer}>
-            <Image
-              source={onboardingData[currentIndex].image}
-              style={styles.image}
-              resizeMode="contain"
-              onError={handleImageError}
-            />
-          </View>
-          <Text style={styles.title}>
-            {onboardingData[currentIndex].title}
-          </Text>
-          <Text style={styles.description}>
-            {onboardingData[currentIndex].description}
-          </Text>
-        </View>
+        <GestureDetector gesture={gesture}>
+          <Animated.View className={`flex-1 items-center justify-center ${layout.padding.default}`} style={animatedStyle}>
+            {/* Image Component */}
+            <View className="w-[300px] h-[300px] justify-center items-center">
+              <SanityImageComponent
+                source={currentScreen.imageUrl}
+                width={280}
+                height={280}
+              />
+            </View>
+            <Text className="text-3xl font-heading-medium text-center mt-8 mb-4 text-primary-Black">
+              {currentScreen.title}
+            </Text>
+            <Text className="text-lg body-regular text-center px-8 text-text-secondary">
+              {currentScreen.description}
+            </Text>
+          </Animated.View>
+        </GestureDetector>
 
         {/* Pagination */}
-        <View style={styles.pagination}>
-          {onboardingData.map((_, index) => (
-            <View
+        <View className={`flex-row justify-center items-center ${layout.spacing.default} mb-8`}>
+          {onboardingData.screens.map((_, index) => (
+            <TouchableOpacity
               key={index}
-              style={[
-                styles.paginationDot,
-                index === currentIndex && styles.paginationDotActive
-              ]}
-            />
+              onPress={() => !isTransitioning && setCurrentIndex(index)}
+              disabled={isTransitioning}
+              className="p-[2px]"
+            >
+              <View
+                className={`h-2 rounded-full ${
+                  index === currentIndex 
+                    ? "w-6 bg-primary-Green" 
+                    : "w-2 bg-[#D1D1D6]"
+                }`}
+              />
+            </TouchableOpacity>
           ))}
         </View>
 
         {/* Navigation button */}
-        <View style={styles.buttonContainer}>
+        <View className={`${layout.padding.default} pb-12`}>
           <TouchableOpacity 
-            style={styles.button}
+            className={buttonStyles.primary.base}
             onPress={handleNext}
+            disabled={isTransitioning}
           >
-            <Text style={styles.buttonText}>
-              {currentIndex === onboardingData.length - 1 ? 'Kom i gang' : 'Neste'}
+            <Text className={buttonStyles.primary.text}>
+              {currentIndex === onboardingData.screens.length - 1 ? 'Kom i gang' : 'Neste'}
             </Text>
+            <ArrowRightIcon size={20} color="black" />
           </TouchableOpacity>
         </View>
       </View>
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  headerButton: {
-    padding: 8,
-  },
-  headerText: {
-    fontSize: 16,
-    color: '#1C1C1E',
-  },
-  mainContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  imageContainer: {
-    width: 300,
-    height: 300,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: 280,
-    height: 280,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 32,
-    marginBottom: 16,
-    color: '#1C1C1E',
-  },
-  description: {
-    fontSize: 16,
-    textAlign: 'center',
-    paddingHorizontal: 32,
-    color: '#3C3C43',
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 32,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#D1D1D6',
-  },
-  paginationDotActive: {
-    width: 24,
-    backgroundColor: '#BCDCC4',
-  },
-  buttonContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 48,
-  },
-  button: {
-    backgroundColor: '#BCDCC4',
-    padding: 18,
-    borderRadius: 9999,
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
-  },
-}); 
+} 

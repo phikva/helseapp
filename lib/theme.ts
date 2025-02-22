@@ -1,3 +1,8 @@
+/**
+ * Component-specific styles that build upon our Tailwind design tokens.
+ * For base design tokens (colors, typography, etc.), see tailwind.config.js
+ */
+
 export const colors = {
   primary: {
     Green: '#BCDCC4',
@@ -27,14 +32,28 @@ export const fonts = {
   },
 } as const;
 
-export const fontSize = {
-  'display-large': ['40px', { lineHeight: '48px' }],
-  'display-medium': ['36px', { lineHeight: '44px' }],
-  'display-small': ['32px', { lineHeight: '40px' }],
-  'heading-large': ['24px', { lineHeight: '32px' }],
-  'heading-medium': ['20px', { lineHeight: '28px' }],
-  'heading-small': ['18px', { lineHeight: '24px' }],
-  'body-large': ['17px', { lineHeight: '24px' }],
-  'body-medium': ['15px', { lineHeight: '22px' }],
-  'body-small': ['13px', { lineHeight: '20px' }],
+export const buttonStyles = {
+  primary: {
+    base: "bg-primary-Green py-[18px] px-6 rounded-full flex-row items-center justify-between",
+    text: "text-xl font-medium text-primary-Black",
+  },
+  secondary: {
+    base: "bg-primary-Black py-[18px] px-6 rounded-full flex-row items-center justify-between",
+    text: "text-xl ont-medium text-white",
+  },
+  transparent: {
+    base: "py-[18px] px-6 flex-row items-center",
+    text: "text-xl font-medium text-primary-Black",
+  },
+} as const;
+
+export const layout = {
+  padding: {
+    default: "px-5",
+    large: "px-6",
+  },
+  spacing: {
+    default: "gap-[8px]",
+    large: "gap-3",
+  },
 } as const; 

@@ -8,7 +8,7 @@ import 'react-native-reanimated';
 import { useColorScheme, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useInitAuth } from '@/hooks/useInitAuth';
+import { useInitAuth } from '@hooks/useInitAuth';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -16,10 +16,6 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
-
-  // Initialize auth state
-  useInitAuth();
-
   const [loaded] = useFonts({
     // Sharp Grotesk for headings
     'SharpGrotesk-Bold20': require('../assets/fonts/SharpGrotesk-Bold20.ttf'),
@@ -30,6 +26,9 @@ export default function RootLayout() {
     'Roboto-Medium': require('../assets/fonts/Roboto-Medium.ttf'),
     'Roboto-Bold': require('../assets/fonts/Roboto-Bold.ttf'),
   });
+
+  // Initialize auth state
+  useInitAuth();
 
   useEffect(() => {
     if (loaded) {

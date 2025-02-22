@@ -1,5 +1,5 @@
 import { View, Text, TextInput, TouchableOpacity } from 'react-native'
-import { EnvelopeIcon, LockClosedIcon, ArrowRightIcon } from '@/components/Icon'
+import { EnvelopeIcon, LockClosedIcon, ArrowRightIcon } from '@components/Icon'
 
 type EmailPasswordFormProps = {
   email: string

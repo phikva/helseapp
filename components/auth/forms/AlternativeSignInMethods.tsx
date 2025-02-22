@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from 'react-native'
-import { EnvelopeIcon, GoogleIcon, ArrowRightIcon } from '@/components/Icon'
+import { EnvelopeIcon, GoogleIcon, ArrowRightIcon } from '@components/Icon'
 
 type AlternativeSignInMethodsProps = {
   onEmailPress: () => void

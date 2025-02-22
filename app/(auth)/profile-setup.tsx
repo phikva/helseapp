@@ -1,8 +1,8 @@
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/lib/store/authStore';
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@store/authStore';
+import { supabase } from '@lib/supabase';
 
 interface UserProfile {
   full_name: string;

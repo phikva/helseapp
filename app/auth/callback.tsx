@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { View, Text, ActivityIndicator, Alert, Platform } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@lib/supabase'
 import * as Linking from 'expo-linking'
 
 type URLParams = {

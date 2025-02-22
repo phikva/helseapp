@@ -1,9 +1,11 @@
 import { defineField, defineType } from 'sanity'
+import { TierIcon } from './icons'
 
 export default defineType({
   name: 'tier',
   title: 'Abonnementsnivå',
   type: 'document',
+  icon: TierIcon,
   fields: [
     defineField({
       name: 'name',

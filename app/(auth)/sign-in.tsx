@@ -1,13 +1,13 @@
 import { View, Text, TextInput, TouchableOpacity, SafeAreaView, Modal } from 'react-native'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@lib/supabase'
 import { 
   EnvelopeIcon, 
   LockClosedIcon,
   ArrowRightIcon,
   GoogleIcon
-} from '@/components/Icon'
+} from '@components/Icon'
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('')

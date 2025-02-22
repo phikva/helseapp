@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { client } from '@/lib/sanity';
+import { client } from '@lib/sanity';
 import type { QueryParams } from '@sanity/client';
 
 export function useSanityQuery<T>(query: string, params?: QueryParams) {

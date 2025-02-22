@@ -1,8 +1,8 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/lib/store/authStore';
-import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@store/authStore';
+import { supabase } from '@lib/supabase';
 
 interface Profile {
   id: string;

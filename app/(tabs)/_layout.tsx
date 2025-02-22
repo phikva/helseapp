@@ -3,10 +3,10 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { useColorScheme } from 'react-native';
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { colors, fonts, fontSize } from '@/lib/theme';
+import { HapticTab } from '@components/HapticTab';
+import { IconSymbol } from '@components/ui/IconSymbol';
+import TabBarBackground from '@components/ui/TabBarBackground';
+import { colors } from '@lib/theme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -35,9 +35,8 @@ export default function TabLayout() {
           borderTopWidth: 0,
         },
         tabBarLabelStyle: {
-          fontFamily: fonts.body.medium,
-          fontSize: parseInt(fontSize['body-small'][0]),
-          lineHeight: parseInt(fontSize['body-small'][1].lineHeight),
+          fontSize: 13,
+          lineHeight: 20,
         },
       }}>
       <Tabs.Screen

@@ -1,5 +1,5 @@
 import { View, Text, TextInput, TouchableOpacity, Modal } from 'react-native'
-import { EnvelopeIcon } from '@/components/Icon'
+import { EnvelopeIcon } from '@components/Icon'
 
 type EmailVerificationModalProps = {
   visible: boolean

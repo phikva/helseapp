@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native'
 import { router } from 'expo-router'
-import { ArrowRightIcon } from '@/components/Icon'
+import { ArrowRightIcon } from '@components/Icon'
+import { buttonStyles, layout } from '@lib/theme'
 
 export default function WelcomeScreen() {
   console.log('Rendering WelcomeScreen');
@@ -16,34 +17,34 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-1 justify-center px-6">
         {/* Content Container */}
         <View>
           {/* Header */}
           <View>
-            <Text style={styles.headerText}>
+            <Text className="text-5xl font-heading-medium text-primary-Black mb-4">
               Hei og{'\n'}velkommen
             </Text>
           </View>
 
           {/* Buttons */}
-          <View style={styles.buttonContainer}>
+          <View className={layout.spacing.large}>
             <TouchableOpacity 
-              style={styles.primaryButton}
+              className={buttonStyles.primary.base}
               onPress={handleStartPress}
             >
-              <Text style={styles.primaryButtonText}>
+              <Text className={buttonStyles.primary.text}>
                 La oss starte
               </Text>
               <ArrowRightIcon size={20} color="black" />
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.secondaryButton}
+              className={buttonStyles.secondary.base}
               onPress={handleExistingUserPress}
             >
-              <Text style={styles.secondaryButtonText}>
+              <Text className={buttonStyles.secondary.text}>
                 Jeg har allerede en bruker
               </Text>
               <ArrowRightIcon size={20} color="white" />
@@ -52,9 +53,9 @@ export default function WelcomeScreen() {
         </View>
 
         {/* Footer */}
-        <View style={styles.footer}>
+        <View className="absolute bottom-6 left-0 right-0">
           <TouchableOpacity>
-            <Text style={styles.footerText}>
+            <Text className="text-sm text-text-secondary opacity-60 text-center underline">
               Vilkår & betingelser
             </Text>
           </TouchableOpacity>
@@ -62,66 +63,4 @@ export default function WelcomeScreen() {
       </View>
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  headerText: {
-    fontSize: 32,
-    fontWeight: '600',
-    lineHeight: 40,
-    color: '#000',
-    marginBottom: 16,
-  },
-  buttonContainer: {
-    gap: 12,
-  },
-  primaryButton: {
-    backgroundColor: '#BCDCC4',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 9999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  secondaryButton: {
-    backgroundColor: '#1C1C1E',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 9999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 24,
-    left: 0,
-    right: 0,
-  },
-  footerText: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: 'rgba(60, 60, 67, 0.6)',
-    textDecorationLine: 'underline',
-  },
-}); 
+} 
