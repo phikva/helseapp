@@ -9,11 +9,12 @@ import Animated, {
   withTiming,
   runOnJS 
 } from 'react-native-reanimated';
-import { SWIPE_ANIMATION } from '@constants/animations';
-import { buttonStyles, layout } from '@lib/theme';
-import { client } from '@lib/sanity';
-import { getOnboardingConfig } from '@lib/queries/onboarding';
-import { SanityImageComponent } from '@components/SanityImage';
+import { SWIPE_ANIMATION } from '../../constants/animations';
+import { buttonStyles, layout } from '../../lib/theme';
+import { client } from '../../lib/sanity';
+import { getOnboardingConfig } from '../../lib/queries/onboarding';
+import { SanityImageComponent } from '../../components/SanityImage';
+import { Button } from '../../components/ui/Button';
 
 const { width } = Dimensions.get('window');
 
@@ -212,16 +213,13 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
 
         {/* Navigation button */}
         <View className={`${layout.padding.default} pb-12`}>
-          <TouchableOpacity 
-            className={buttonStyles.primary.base}
+          <Button 
+            variant="primary"
             onPress={handleNext}
             disabled={isTransitioning}
           >
-            <Text className={buttonStyles.primary.text}>
-              {currentIndex === onboardingData.screens.length - 1 ? 'Kom i gang' : 'Neste'}
-            </Text>
-            <ArrowRightIcon size={20} color="black" />
-          </TouchableOpacity>
+            {currentIndex === onboardingData.screens.length - 1 ? 'Kom i gang' : 'Neste'}
+          </Button>
         </View>
       </View>
     </View>

@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@store/authStore';
 import { supabase } from '@lib/supabase';
@@ -21,6 +21,35 @@ export default function ProfileSetup() {
     age: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Check if profile already exists
+  useEffect(() => {
+    async function checkProfile() {
+      if (!session?.user) {
+        router.replace('/sign-in');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        // If profile exists, go to main app
+        if (data) {
+          router.replace('/(tabs)');
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+      }
+    }
+
+    checkProfile();
+  }, [session]);
 
   const validateProfile = () => {
     if (!profile.full_name.trim()) {

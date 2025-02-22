@@ -1,7 +1,7 @@
-import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native'
+import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
-import { ArrowRightIcon } from '@components/Icon'
-import { buttonStyles, layout } from '@lib/theme'
+import { layout } from '../../lib/theme'
+import { Button } from '../../components/ui/Button'
 
 export default function WelcomeScreen() {
   console.log('Rendering WelcomeScreen');
@@ -29,26 +29,20 @@ export default function WelcomeScreen() {
           </View>
 
           {/* Buttons */}
-          <View className={layout.spacing.large}>
-            <TouchableOpacity 
-              className={buttonStyles.primary.base}
+          <View className={layout.spacing.large + ' gap-y-4'}>
+            <Button 
+              variant="primary"
               onPress={handleStartPress}
             >
-              <Text className={buttonStyles.primary.text}>
-                La oss starte
-              </Text>
-              <ArrowRightIcon size={20} color="black" />
-            </TouchableOpacity>
+              La oss starte
+            </Button>
 
-            <TouchableOpacity 
-              className={buttonStyles.secondary.base}
+            <Button 
+              variant="secondary"
               onPress={handleExistingUserPress}
             >
-              <Text className={buttonStyles.secondary.text}>
-                Jeg har allerede en bruker
-              </Text>
-              <ArrowRightIcon size={20} color="white" />
-            </TouchableOpacity>
+              Jeg har allerede en bruker
+            </Button>
           </View>
         </View>
 

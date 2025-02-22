@@ -1,7 +1,8 @@
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView, Modal } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, SafeAreaView, Modal, Alert } from 'react-native'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { supabase } from '@lib/supabase'
+import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../lib/store/authStore'
 import { 
   EnvelopeIcon, 
   LockClosedIcon,
@@ -21,6 +22,7 @@ export default function SignInScreen() {
   const [verificationCode, setVerificationCode] = useState('')
   const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false)
   const [emailVerificationCode, setEmailVerificationCode] = useState('')
+  const { session } = useAuthStore()
 
   // Format phone number to E.164 format
   const formatPhoneNumber = (number: string) => {
@@ -118,24 +120,39 @@ export default function SignInScreen() {
     }
   }
 
-  async function signIn() {
+  const handleSignIn = async () => {
     try {
-      setLoading(true)
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      if (error) throw error
-      
-      // Check profile and redirect accordingly
-      await checkProfileAndRedirect();
+      setLoading(true);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password: password,
+      });
+
+      if (signInError) throw signInError;
+
+      // Check if profile exists
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session?.user?.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+
+      // Redirect based on profile existence
+      if (profile) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/profile-setup');
+      }
+
     } catch (error) {
-      console.error(error)
-      alert('Feil ved innlogging: ' + (error as Error).message)
+      console.error('Error signing in:', error);
+      Alert.alert('Feil ved innlogging', error instanceof Error ? error.message : 'En feil oppstod');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   async function signInWithEmail() {
     try {
@@ -383,7 +400,7 @@ export default function SignInScreen() {
 
             <TouchableOpacity 
               className="bg-primary-Black py-[18px] px-6 rounded-full flex-row items-center justify-between"
-              onPress={signIn}
+              onPress={handleSignIn}
               disabled={loading || !email || !password}
             >
               <Text className="text-white text-body-large font-heading-medium">
