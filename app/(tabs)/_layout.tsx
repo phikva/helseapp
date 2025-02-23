@@ -2,11 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 import { useColorScheme } from 'react-native';
-
-import { HapticTab } from '@components/HapticTab';
-import { IconSymbol } from '@components/ui/IconSymbol';
-import TabBarBackground from '@components/ui/TabBarBackground';
-import { colors } from '@lib/theme';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -15,17 +11,15 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary.Green,
-        tabBarInactiveTintColor: colors.text.secondary,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
+        tabBarActiveTintColor: '#22C55E', // primary.Green
+        tabBarInactiveTintColor: '#64748B', // text.secondary
         tabBarStyle: {
           ...Platform.select({
             ios: {
-              backgroundColor: colors.background.DEFAULT,
+              backgroundColor: '#FFFFFF',
             },
             android: {
-              backgroundColor: colors.background.DEFAULT,
+              backgroundColor: '#FFFFFF',
               elevation: 0,
             },
           }),
@@ -43,21 +37,31 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Hjem',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="home" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="categories"
         options={{
-          title: 'Utforsk',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="paperplane.fill" color={color} />,
+          title: 'Kategorier',
+          tabBarIcon: ({ color }) => <Ionicons name="grid" size={26} color={color} />,
+          href: '/categories',
+        }}
+      />
+      <Tabs.Screen
+        name="recipes"
+        options={{
+          title: 'Oppskrifter',
+          tabBarIcon: ({ color }) => <Ionicons name="book" size={26} color={color} />,
+          href: '/recipes',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="person" size={26} color={color} />,
+          href: '/profile',
         }}
       />
     </Tabs>

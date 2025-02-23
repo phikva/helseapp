@@ -7,7 +7,7 @@ export function TopHeader() {
 
   return (
     <View className="px-4 py-2 flex-row justify-between items-center border-b border-gray-200">
-      <TouchableOpacity onPress={() => router.push('/cart' as any)}>
+      <TouchableOpacity onPress={() => router.push('/cart')}>
         <Feather name="shopping-cart" size={24} color="black" />
       </TouchableOpacity>
       <TouchableOpacity onPress={() => router.push('/search' as any)}>

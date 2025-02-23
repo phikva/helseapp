@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../lib/store/authStore';
@@ -14,6 +14,8 @@ import { Button } from '../../components/ui/Button';
 import { Svg, Path } from 'react-native-svg';
 import EditProfileForm from '../components/EditProfileForm';
 import { useToast } from '../components/ui/Toast';
+import ProfileSkeleton from '../components/skeleton/ProfileSkeleton';
+import { TopHeader } from '../../components/ui/TopHeader';
 
 const WeightIcon = ({ size = 24, color = "#16A34A" }) => (
   <View style={{ width: size, height: size }}>
@@ -247,152 +249,156 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-background">
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
+      <SafeAreaView className="flex-1 bg-background pt-12">
+        <TopHeader />
+        <ProfileSkeleton />
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-background">
-      <View className="px-5 py-8">
-        <Text className="font-heading-medium text-display-small text-primary-Black mb-4">
-          Min Profil
-        </Text>
+    <SafeAreaView className="flex-1 bg-background pt-12">
+      <TopHeader />
+      <ScrollView className="flex-1">
+        <View className="px-5 py-8">
+          <Text className="font-heading-medium text-display-small text-primary-Black mb-4">
+            Min Profil
+          </Text>
 
-        {profile ? (
-          <>
-            <View className="bg-white rounded-2xl p-6 mb-4 shadow-sm">
-              <View className="flex-row items-center mb-6">
-                <View className="w-16 h-16 bg-primary-Green/10 rounded-full items-center justify-center mb-2">
-                  <IconSymbol name="person.fill" size={32} color="#16A34A" />
+          {profile ? (
+            <>
+              <View className="bg-white rounded-2xl p-6 mb-4 shadow-sm">
+                <View className="flex-row items-center mb-6">
+                  <View className="w-16 h-16 bg-primary-Green/10 rounded-full items-center justify-center mb-2">
+                    <IconSymbol name="person.fill" size={32} color="#16A34A" />
+                  </View>
+                  <View className="ml-4">
+                    <Text className="text-primary-Black text-xl font-bold">{profile.full_name}</Text>
+                    <Text className="text-text-secondary">Sist oppdatert: {new Date(profile.updated_at).toLocaleDateString('no-NO')}</Text>
+                  </View>
                 </View>
-                <View className="ml-4">
-                  <Text className="text-primary-Black text-xl font-bold">{profile.full_name}</Text>
-                  <Text className="text-text-secondary">Sist oppdatert: {new Date(profile.updated_at).toLocaleDateString('no-NO')}</Text>
+
+                <View className="flex-row flex-wrap -mx-2">
+                  <View className="w-1/2 px-2 mb-4">
+                    <View className="bg-gray-50 p-4 rounded-xl">
+                      <View className="flex-row items-center mb-2">
+                        <WeightIcon size={24} />
+                        <Text className="text-text-secondary text-body-medium ml-2">Vekt</Text>
+                      </View>
+                      <Text className="text-primary-Black text-xl font-semibold">{profile.weight} kg</Text>
+                    </View>
+                  </View>
+
+                  <View className="w-1/2 px-2 mb-4">
+                    <View className="bg-gray-50 p-4 rounded-xl">
+                      <View className="flex-row items-center mb-2">
+                        <HeightIcon size={24} />
+                        <Text className="text-text-secondary text-body-medium ml-2">Høyde</Text>
+                      </View>
+                      <Text className="text-primary-Black text-xl font-semibold">{profile.height} cm</Text>
+                    </View>
+                  </View>
+
+                  <View className="w-1/2 px-2">
+                    <View className="bg-gray-50 p-4 rounded-xl">
+                      <View className="flex-row items-center mb-2">
+                        <IconSymbol name="chevron.right" size={24} color="#16A34A" />
+                        <Text className="text-text-secondary text-body-medium ml-2">Alder</Text>
+                      </View>
+                      <Text className="text-primary-Black text-xl font-semibold">{profile.age} år</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
 
-              <View className="flex-row flex-wrap -mx-2">
-                <View className="w-1/2 px-2 mb-4">
-                  <View className="bg-gray-50 p-4 rounded-xl">
-                    <View className="flex-row items-center mb-2">
-                      <WeightIcon size={24} />
-                      <Text className="text-text-secondary text-body-medium ml-2">Vekt</Text>
-                    </View>
-                    <Text className="text-primary-Black text-xl font-semibold">{profile.weight} kg</Text>
-                  </View>
-                </View>
-
-                <View className="w-1/2 px-2 mb-4">
-                  <View className="bg-gray-50 p-4 rounded-xl">
-                    <View className="flex-row items-center mb-2">
-                      <HeightIcon size={24} />
-                      <Text className="text-text-secondary text-body-medium ml-2">Høyde</Text>
-                    </View>
-                    <Text className="text-primary-Black text-xl font-semibold">{profile.height} cm</Text>
-                  </View>
-                </View>
-
-                <View className="w-1/2 px-2">
-                  <View className="bg-gray-50 p-4 rounded-xl">
-                    <View className="flex-row items-center mb-2">
-                      <IconSymbol name="chevron.right" size={24} color="#16A34A" />
-                      <Text className="text-text-secondary text-body-medium ml-2">Alder</Text>
-                    </View>
-                    <Text className="text-primary-Black text-xl font-semibold">{profile.age} år</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            <Button
-              onPress={handleEditProfile}
-              className="mb-6"
-            >
-              Rediger Profil
-            </Button>
-
-            {/* Edit Profile Form Modal */}
-            {profile && (
-              <EditProfileForm
-                profile={profile}
-                visible={showEditForm}
-                onClose={() => setShowEditForm(false)}
-                onSave={fetchProfile}
-              />
-            )}
-          </>
-        ) : (
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-text-secondary text-body-large">
-              Ingen profildata funnet
-            </Text>
-          </View>
-        )}
-
-        {session?.user && (
-          <>
-            <DietaryRequirements 
-              profileId={session.user.id} 
-              onChanges={(values) => handlePreferenceChange('dietary', values)}
-              setInitialValues={(values) => {
-                setOriginalPreferences(prev => ({...prev, dietary: values}));
-                setPreferenceChanges(prev => ({...prev, dietary: values}));
-              }}
-            />
-            <Allergies 
-              profileId={session.user.id}
-              onChanges={(values) => handlePreferenceChange('allergies', values)}
-              setInitialValues={(values) => {
-                setOriginalPreferences(prev => ({...prev, allergies: values}));
-                setPreferenceChanges(prev => ({...prev, allergies: values}));
-              }}
-            />
-            <FoodPreferences 
-              profileId={session.user.id}
-              onChanges={(values) => handlePreferenceChange('cuisines', values)}
-              setInitialValues={(values) => {
-                setOriginalPreferences(prev => ({...prev, cuisines: values}));
-                setPreferenceChanges(prev => ({...prev, cuisines: values}));
-              }}
-            />
-            <BudgetSettings 
-              profileId={session.user.id}
-              onChanges={(values) => handlePreferenceChange('budget', values)}
-              setInitialValues={(values) => {
-                setOriginalPreferences(prev => ({...prev, budget: values}));
-                setPreferenceChanges(prev => ({...prev, budget: values}));
-              }}
-            />
-            <PortionSettings profileId={session.user.id} />
-
-            {hasPreferenceChanges() && (
-              <TouchableOpacity
-                onPress={saveAllChanges}
-                disabled={saving}
-                className="bg-primary-Black py-[18px] rounded-full items-center flex-row justify-center mb-6"
+              <Button
+                onPress={handleEditProfile}
+                className="mb-6"
               >
-                <Text className="text-white font-heading-medium text-body-large mr-2">
-                  {saving ? 'Lagrer...' : 'Lagre alle endringer'}
-                </Text>
-                <IconSymbol name="chevron.right" size={24} color="white" />
-              </TouchableOpacity>
-            )}
-          </>
-        )}
+                Rediger Profil
+              </Button>
 
-        <View className="flex items-center">
-          <TouchableOpacity
-            onPress={handleSignOut}
-            className={`${buttonStyles.secondary.base} w-full`}
-          >
-            <Text className={buttonStyles.secondary.text}>
-              Logg ut
-            </Text>
-          </TouchableOpacity>
+              {/* Edit Profile Form Modal */}
+              {profile && (
+                <EditProfileForm
+                  profile={profile}
+                  visible={showEditForm}
+                  onClose={() => setShowEditForm(false)}
+                  onSave={fetchProfile}
+                />
+              )}
+            </>
+          ) : (
+            <View className="bg-white rounded-2xl p-6 mb-6">
+              <Text className="text-text-secondary text-body-large">
+                Ingen profildata funnet
+              </Text>
+            </View>
+          )}
+
+          {session?.user && (
+            <>
+              <DietaryRequirements 
+                profileId={session.user.id} 
+                onChanges={(values) => handlePreferenceChange('dietary', values)}
+                setInitialValues={(values) => {
+                  setOriginalPreferences(prev => ({...prev, dietary: values}));
+                  setPreferenceChanges(prev => ({...prev, dietary: values}));
+                }}
+              />
+              <Allergies 
+                profileId={session.user.id}
+                onChanges={(values) => handlePreferenceChange('allergies', values)}
+                setInitialValues={(values) => {
+                  setOriginalPreferences(prev => ({...prev, allergies: values}));
+                  setPreferenceChanges(prev => ({...prev, allergies: values}));
+                }}
+              />
+              <FoodPreferences 
+                profileId={session.user.id}
+                onChanges={(values) => handlePreferenceChange('cuisines', values)}
+                setInitialValues={(values) => {
+                  setOriginalPreferences(prev => ({...prev, cuisines: values}));
+                  setPreferenceChanges(prev => ({...prev, cuisines: values}));
+                }}
+              />
+              <BudgetSettings 
+                profileId={session.user.id}
+                onChanges={(values) => handlePreferenceChange('budget', values)}
+                setInitialValues={(values) => {
+                  setOriginalPreferences(prev => ({...prev, budget: values}));
+                  setPreferenceChanges(prev => ({...prev, budget: values}));
+                }}
+              />
+              <PortionSettings profileId={session.user.id} />
+
+              {hasPreferenceChanges() && (
+                <TouchableOpacity
+                  onPress={saveAllChanges}
+                  disabled={saving}
+                  className="bg-primary-Black py-[18px] rounded-full items-center flex-row justify-center mb-6"
+                >
+                  <Text className="text-white font-heading-medium text-body-large mr-2">
+                    {saving ? 'Lagrer...' : 'Lagre alle endringer'}
+                  </Text>
+                  <IconSymbol name="chevron.right" size={24} color="white" />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
+          <View className="flex items-center">
+            <TouchableOpacity
+              onPress={handleSignOut}
+              className={`${buttonStyles.secondary.base} w-full`}
+            >
+              <Text className={buttonStyles.secondary.text}>
+                Logg ut
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 } 
