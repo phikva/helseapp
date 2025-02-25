@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@store/authStore';
 import { supabase } from '@lib/supabase';
+import { getDefaultSubscription } from '@lib/services/subscriptionService';
 
 interface UserProfile {
   full_name: string;
@@ -84,6 +85,18 @@ export default function ProfileSetup() {
     try {
       setLoading(true);
       
+      // Get the default subscription
+      let subscriptionId = null;
+      try {
+        const defaultSubscription = await getDefaultSubscription();
+        if (defaultSubscription) {
+          subscriptionId = defaultSubscription._id;
+        }
+      } catch (subscriptionError) {
+        console.error('Error getting default subscription:', subscriptionError);
+        // Continue without subscription if there's an error
+      }
+      
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -92,6 +105,7 @@ export default function ProfileSetup() {
           weight: profile.weight,
           height: profile.height,
           age: profile.age,
+          subscription_id: subscriptionId,
           updated_at: new Date().toISOString()
         });
 
@@ -99,13 +113,9 @@ export default function ProfileSetup() {
 
       // Navigate to main app after saving
       router.replace('/(tabs)');
-      
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert(
-        'Feil ved lagring',
-        'Det oppstod en feil ved lagring av profilen din. Vennligst prøv igjen.'
-      );
+      Alert.alert('Feil', 'Det oppstod en feil ved lagring av profil. Prøv igjen senere.');
     } finally {
       setLoading(false);
     }
@@ -114,7 +124,7 @@ export default function ProfileSetup() {
   return (
     <ScrollView className="flex-1 bg-background">
       <View className="px-5 py-40Phil">
-        <Text className="font-heading-medium text-display-small text-primary-Black mb-4">
+        <Text className="font-heading-serif text-display-small text-primary-Black mb-4">
           La oss bli litt bedre kjent!
         </Text>
         <Text className="font-body text-body-large text-text-secondary mb-8">

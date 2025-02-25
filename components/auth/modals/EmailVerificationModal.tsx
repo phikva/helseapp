@@ -27,7 +27,7 @@ export function EmailVerificationModal({
     >
       <View className="flex-1 justify-center items-center bg-black/50">
         <View className="bg-background m-5 p-6 rounded-3xl w-full max-w-sm">
-          <Text className="text-display-small font-heading-medium mb-6 text-text">
+          <Text className="text-display-small font-heading-serif mb-6 text-text">
             Få registreringslink
           </Text>
           
@@ -59,7 +59,7 @@ export function EmailVerificationModal({
               onPress={onSubmit}
               disabled={loading || !email}
             >
-              <Text className="text-center text-white text-body-large font-heading-medium">
+              <Text className="text-center text-black text-body-large font-heading-medium">nt-heading-medium">
                 {loading ? 'Sender...' : 'Send link'}
               </Text>
             </TouchableOpacity>

@@ -35,7 +35,7 @@ export function AlternativeSignInMethods({
         >
           <View className="flex-row items-center">
             <EnvelopeIcon size={20} color="#3C3C43" />
-            <Text className="text-text text-body-large font-heading-medium ml-2">
+            <Text className="text-text text-body-large serif ml-2">
               Få {isSignUp ? 'registreringslink' : 'innloggingslink'} på e-post
             </Text>
           </View>
@@ -49,7 +49,7 @@ export function AlternativeSignInMethods({
         >
           <View className="flex-row items-center">
             <GoogleIcon size={20} color="#3C3C43" />
-            <Text className="text-text text-body-large font-heading-medium ml-2">
+            <Text className="text-text text-body-large serif ml-2">
               Fortsett med Google
             </Text>
           </View>
@@ -63,7 +63,7 @@ export function AlternativeSignInMethods({
           disabled={loading}
         >
           <View className="flex-row items-center">
-            <Text className="text-text text-body-large font-heading-medium">
+            <Text className="text-text text-body-large serif">
               Få {isSignUp ? 'registreringskode' : 'innloggingskode'} på SMS
             </Text>
           </View>

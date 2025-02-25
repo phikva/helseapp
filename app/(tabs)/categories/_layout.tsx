@@ -8,13 +8,13 @@ export default function CategoriesLayout() {
   const router = useRouter();
 
   return (
-    <SafeAreaView className="flex-1 bg-background pt-12">
+    <SafeAreaView className="flex-1 bg-background pt-12 pb-0">
       <TopHeader />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: 'white' },
           headerShadowVisible: false,
-          contentStyle: { paddingTop: 0 },
+          contentStyle: { paddingTop: 0, paddingBottom: 0 },
           headerTitleStyle: {
             fontFamily: 'heading-medium',
             fontSize: 32,
@@ -30,9 +30,11 @@ export default function CategoriesLayout() {
             headerShown: true,
             headerBackVisible: false,
             headerTitle: () => (
-              <Text className="font-heading-medium text-display-small text-primary-Black">
-                Kategorier
-              </Text>
+              <View style={{ marginBottom: -10, height: 40 }}>
+                <Text className="font-heading-serif text-display-small text-primary-Black">
+                  Kategorier
+                </Text>
+              </View>
             ),
           }}
         />

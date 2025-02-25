@@ -17,13 +17,13 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 justify-center px-6">
+    <SafeAreaView className="flex-1">
+      <View className="flex-1 justify-center px-6 bg-light">
         {/* Content Container */}
         <View>
           {/* Header */}
           <View>
-            <Text className="text-5xl font-heading-medium text-primary-Black mb-4">
+            <Text className="text-6xl font-heading-serif text-primary-green mb-4">
               Hei og{'\n'}velkommen
             </Text>
           </View>

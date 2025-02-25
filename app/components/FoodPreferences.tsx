@@ -79,7 +79,7 @@ export default function FoodPreferences({ profileId, onChanges, setInitialValues
 
   return (
     <View className="mb-20">
-      <Text className="font-heading-medium text-display-small text-primary-Black mb-2">
+      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">
         Matpreferanser
       </Text>
       <Text className="text-text-secondary text-body-large mb-6">

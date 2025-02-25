@@ -51,7 +51,7 @@ export function EmailPasswordForm({
         onPress={onSubmit}
         disabled={loading || !email || !password}
       >
-        <Text className="text-text text-body-large font-heading-medium">
+        <Text className="text-text text-body-large font-heading-serif">
           {loading ? 'Laster...' : submitText}
         </Text>
         <ArrowRightIcon size={20} color="black" />

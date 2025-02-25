@@ -444,11 +444,11 @@ export default function SignUpScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background pt-24">
-      <View className="flex-1 px-6">
+    <SafeAreaView className="flex-1 pt-24">
+      <View className="flex-1 px-6 bg-light">
         {/* Header */}
         <View className="mb-6">
-          <Text className="text-display-large font-heading-medium leading-tight text-text">
+          <Text className="text-6xl font-heading-serif leading-tight text-primary-green">
             Lag din bruker
           </Text>
           <Text className="text-body-large font-body text-text-secondary mt-2">

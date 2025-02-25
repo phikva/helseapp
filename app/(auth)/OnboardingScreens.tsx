@@ -1,6 +1,6 @@
 import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
-import { ArrowRightIcon } from '@components/Icon';
+import { ArrowRightIcon } from '../../components/Icon';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { 
   useAnimatedStyle, 
@@ -10,11 +10,12 @@ import Animated, {
   runOnJS 
 } from 'react-native-reanimated';
 import { SWIPE_ANIMATION } from '../../constants/animations';
-import { buttonStyles, layout } from '../../lib/theme';
+import { buttonStyles, layout, colors } from '../../lib/theme';
 import { client } from '../../lib/sanity';
 import { getOnboardingConfig } from '../../lib/queries/onboarding';
 import { SanityImageComponent } from '../../components/SanityImage';
 import { Button } from '../../components/ui/Button';
+import { ColorMapping } from '../../hooks/useSvgColor';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +37,10 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [onboardingData, setOnboardingData] = useState<OnboardingConfig | null>(null);
+  const [screenColors, setScreenColors] = useState<ColorMapping>({
+    primary: colors.primary.green,
+    text: colors.primary.green,
+  });
   const translateX = useSharedValue(0);
 
   // Fetch onboarding data
@@ -103,6 +108,10 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
     });
   };
 
+  const handleColorExtracted = (colors: ColorMapping) => {
+    setScreenColors(colors);
+  };
+
   const gesture = Gesture.Pan()
     .onBegin(() => {
       if (isTransitioning) return;
@@ -142,6 +151,14 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
 
   const currentScreen = onboardingData.screens[currentIndex];
 
+  // Custom button style with dynamic color
+  const dynamicButtonStyle = {
+    backgroundColor: screenColors.primary,
+    borderRadius: 9999, // rounded-full
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+  };
+
   return (
     <View className="flex-1 bg-white">
       <View className="flex-1">
@@ -153,7 +170,7 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
               className={buttonStyles.transparent.base}
               disabled={isTransitioning}
             >
-              <Text className={buttonStyles.transparent.text}>
+              <Text className={buttonStyles.transparent.text} style={{ color: screenColors.text }}>
                 Tilbake
               </Text>
             </TouchableOpacity>
@@ -165,7 +182,7 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
             className={buttonStyles.transparent.base}
             disabled={isTransitioning}
           >
-            <Text className={buttonStyles.transparent.text}>
+            <Text className={buttonStyles.transparent.text} style={{ color: screenColors.text }}>
               Hopp over
             </Text>
           </TouchableOpacity>
@@ -180,9 +197,13 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
                 source={currentScreen.imageUrl}
                 width={280}
                 height={280}
+                onColorExtracted={handleColorExtracted}
               />
             </View>
-            <Text className="text-3xl font-heading-medium text-center mt-8 mb-4 text-primary-Black">
+            <Text 
+              className="text-5xl font-heading-serif text-center mt-8 mb-4" 
+              style={{ color: screenColors.text }}
+            >
               {currentScreen.title}
             </Text>
             <Text className="text-lg body-regular text-center px-8 text-text-secondary">
@@ -201,11 +222,12 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
               className="p-[2px]"
             >
               <View
-                className={`h-2 rounded-full ${
-                  index === currentIndex 
-                    ? "w-6 bg-primary-Green" 
-                    : "w-2 bg-[#D1D1D6]"
-                }`}
+                style={{
+                  height: 8,
+                  borderRadius: 4,
+                  width: index === currentIndex ? 24 : 8,
+                  backgroundColor: index === currentIndex ? screenColors.primary : '#D1D1D6'
+                }}
               />
             </TouchableOpacity>
           ))}
@@ -217,6 +239,8 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
             variant="primary"
             onPress={handleNext}
             disabled={isTransitioning}
+            style={dynamicButtonStyle}
+            textColor="white"
           >
             {currentIndex === onboardingData.screens.length - 1 ? 'Kom i gang' : 'Neste'}
           </Button>

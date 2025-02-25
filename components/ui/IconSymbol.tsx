@@ -11,6 +11,8 @@ const ICON_MAPPING = {
   'person.fill': 'person-sharp',
   'chevron.left.forwardslash.chevron.right': 'code-sharp',
   'chevron.right': 'chevron-forward',
+  'chevron.up': 'chevron-up',
+  'chevron.down': 'chevron-down',
 } as const;
 
 export type IconSymbolName = keyof typeof ICON_MAPPING;

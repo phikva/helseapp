@@ -8,8 +8,12 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          Green: '#BCDCC4', // Light green color from your button
-          Black: '#1C1C1E',    // Dark color from your button
+          green: '#4A6C62', // Light green color from your button
+          black: '#1C1C1E',    // Dark color from your button
+          cyan: '#055976',     // Cyan color for accents
+          light: '#FCFCEC',
+          purple: '#752167',
+
         },
         text: {
           DEFAULT: '#000000',
@@ -40,6 +44,7 @@ module.exports = {
         'heading-bold': ['SharpGrotesk-Bold20'],
         'heading-medium': ['SharpGrotesk-Medium20'],
         'heading-book': ['SharpGrotesk-Book20'],
+        'heading-serif': ['Montaga-Regular'],
         // Body text
         'body': ['Roboto-Regular'],
         'body-medium': ['Roboto-Medium'],

@@ -1,0 +1,1 @@
+INSERT INTO "public"."allergies" ("id", "profile_id", "allergy_name", "created_at") VALUES ('ea21446a-f08f-4614-8ab0-341d182041cb', '8b0898fe-9ab3-4498-8bb1-f00add7b4a78', 'Egg', '2025-02-23 19:32:43.473675+00'), ('f08caee5-c99c-46da-b8a3-62cc696b944f', '8b0898fe-9ab3-4498-8bb1-f00add7b4a78', 'Skalldyr', '2025-02-23 19:32:43.473675+00');

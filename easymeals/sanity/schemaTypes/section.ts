@@ -66,7 +66,13 @@ export const sectionSchema = defineType({
           name: 'image',
           title: 'Bilde',
           type: 'image',
-          options: { hotspot: true }
+          options: {
+            hotspot: true,
+            accept: 'image/svg+xml,image/*',
+            storeOriginalFilename: true,
+            metadata: ['exif', 'location', 'lqip', 'palette', 'blurhash'],
+          },
+          description: 'Bilde for seksjonen (støtter også SVG-filer)',
         }),
         defineField({
           name: 'items',

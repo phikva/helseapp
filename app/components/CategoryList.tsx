@@ -4,6 +4,7 @@ import { client, urlFor } from '@/lib/sanity';
 import { getAllCategoriesQuery } from '@/lib/queries/categoryQueries';
 import { useRouter } from 'expo-router';
 import CategoryListSkeleton from './skeleton/CategoryListSkeleton';
+import { colors } from '../../lib/theme';
 
 // Define the Category type
 interface Category {
@@ -46,7 +47,7 @@ export default function CategoryList() {
         <Text className="text-red-500 text-center">{error}</Text>
         <TouchableOpacity 
           onPress={fetchCategories}
-          className="mt-4 bg-cyan-600 px-4 py-2 rounded-lg"
+          className="mt-4 bg-primary-green px-4 py-2 rounded-lg"
         >
           <Text className="text-white">Retry</Text>
         </TouchableOpacity>
@@ -55,13 +56,15 @@ export default function CategoryList() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white">
-      <View className="p-4">
+    <ScrollView className="flex-1" style={{ backgroundColor: colors.primary.light }} showsVerticalScrollIndicator={false}>
+      <View className="px-4 pt-4">
+    
+        
         <View className="flex-row flex-wrap justify-between">
           {categories.map((category) => (
             <TouchableOpacity
               key={category._id}
-              className="w-[48%] mb-4 rounded-lg overflow-hidden bg-gray-100 shadow"
+              className="w-[48%] mb-4 rounded-2xl overflow-hidden bg-white shadow-sm"
               onPress={() => {
                 router.push({
                   pathname: '/categories/[id]',
@@ -82,7 +85,7 @@ export default function CategoryList() {
                 }}
               />
               <View className="p-3">
-                <Text className="text-lg font-semibold text-center">
+                <Text className="font-heading-serif text-xl" numberOfLines={1}>
                   {category.name}
                 </Text>
               </View>

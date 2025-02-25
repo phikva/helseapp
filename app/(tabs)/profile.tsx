@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView, Dimensions } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../lib/store/authStore';
@@ -9,6 +9,7 @@ import Allergies from '../components/Allergies';
 import FoodPreferences from '../components/FoodPreferences';
 import BudgetSettings from '../components/BudgetSettings';
 import PortionSettings from '../components/PortionSettings';
+import SubscriptionManager from '../components/SubscriptionManager';
 import { IconSymbol } from '../../components/ui/IconSymbol';
 import { Button } from '../../components/ui/Button';
 import { Svg, Path } from 'react-native-svg';
@@ -16,6 +17,8 @@ import EditProfileForm from '../components/EditProfileForm';
 import { useToast } from '../components/ui/Toast';
 import ProfileSkeleton from '../components/skeleton/ProfileSkeleton';
 import { TopHeader } from '../../components/ui/TopHeader';
+
+const { width } = Dimensions.get('window');
 
 const WeightIcon = ({ size = 24, color = "#16A34A" }) => (
   <View style={{ width: size, height: size }}>
@@ -62,6 +65,7 @@ interface PreferenceChanges {
     amount: string;
     period: 'weekly' | 'monthly';
   };
+  portions?: number;
 }
 
 export default function ProfileScreen() {
@@ -82,6 +86,14 @@ export default function ProfileScreen() {
     allergies: new Set(),
     cuisines: new Set()
   });
+
+  // Custom tab implementation
+  const [activeTab, setActiveTab] = useState('profile');
+  const tabs = [
+    { key: 'profile', title: 'Profil' },
+    { key: 'subscription', title: 'Abonnement' },
+    { key: 'preferences', title: 'Preferanser' },
+  ];
 
   useEffect(() => {
     fetchProfile();
@@ -126,7 +138,7 @@ export default function ProfileScreen() {
   };
 
   const hasPreferenceChanges = () => {
-    const types: (keyof PreferenceChanges)[] = ['dietary', 'allergies', 'cuisines', 'budget'];
+    const types: (keyof PreferenceChanges)[] = ['dietary', 'allergies', 'cuisines', 'budget', 'portions'];
     return types.some(type => {
       if (type === 'budget') {
         const original = originalPreferences.budget;
@@ -134,6 +146,9 @@ export default function ProfileScreen() {
         if (!original && !current) return false;
         if (!original || !current) return true;
         return original.amount !== current.amount || original.period !== current.period;
+      }
+      if (type === 'portions') {
+        return originalPreferences.portions !== preferenceChanges.portions;
       }
       const original = Array.from(originalPreferences[type] as Set<string>);
       const current = Array.from(preferenceChanges[type] as Set<string>);
@@ -226,6 +241,31 @@ export default function ProfileScreen() {
         }
       }
 
+      // Save portion settings if changed
+      if (preferenceChanges.portions !== undefined && preferenceChanges.portions !== originalPreferences.portions) {
+        const { data: existingPortions } = await supabase
+          .from('portion_settings')
+          .select('id')
+          .eq('profile_id', session!.user.id)
+          .single();
+
+        const portionData = {
+          profile_id: session!.user.id,
+          number_of_people: preferenceChanges.portions
+        };
+
+        if (existingPortions?.id) {
+          await supabase
+            .from('portion_settings')
+            .update(portionData)
+            .eq('id', existingPortions.id);
+        } else {
+          await supabase
+            .from('portion_settings')
+            .insert([portionData]);
+        }
+      }
+
       // Update original preferences to match current
       setOriginalPreferences({...preferenceChanges});
       
@@ -247,6 +287,182 @@ export default function ProfileScreen() {
     }
   };
 
+  // Tab content components
+  const renderProfileTab = () => (
+    <ScrollView className="flex-1 px-5">
+      {profile ? (
+        <>
+          <View className="bg-white rounded-2xl p-6 mb-4 shadow-sm">
+            <View className="flex-row items-center mb-6">
+              <View className="w-16 h-16 bg-primary-Green/10 rounded-full items-center justify-center mb-2">
+                <IconSymbol name="person.fill" size={32} color="#16A34A" />
+              </View>
+              <View className="ml-4">
+                <Text className="text-primary-Black text-xl font-bold">{profile.full_name}</Text>
+                <Text className="text-text-secondary">Sist oppdatert: {new Date(profile.updated_at).toLocaleDateString('no-NO')}</Text>
+              </View>
+            </View>
+
+            {/* Improved stats section with better UI */}
+            <View className="bg-gray-50 p-4 rounded-xl mb-4">
+              <Text className="text-primary-Black text-lg font-semibold mb-3">Personlige data</Text>
+              <View className="space-y-3">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <WeightIcon size={24} />
+                    <Text className="text-text-secondary text-body-medium ml-2">Vekt</Text>
+                  </View>
+                  <Text className="text-primary-Black text-xl font-semibold">{profile.weight} kg</Text>
+                </View>
+                
+                <View className="h-[1px] bg-gray-200" />
+                
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <HeightIcon size={24} />
+                    <Text className="text-text-secondary text-body-medium ml-2">Høyde</Text>
+                  </View>
+                  <Text className="text-primary-Black text-xl font-semibold">{profile.height} cm</Text>
+                </View>
+                
+                <View className="h-[1px] bg-gray-200" />
+                
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <IconSymbol name="chevron.right" size={24} color="#16A34A" />
+                    <Text className="text-text-secondary text-body-medium ml-2">Alder</Text>
+                  </View>
+                  <Text className="text-primary-Black text-xl font-semibold">{profile.age} år</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <Button
+            onPress={handleEditProfile}
+            className="mb-6"
+          >
+            Rediger Profil
+          </Button>
+
+          {/* Edit Profile Form Modal */}
+          {profile && (
+            <EditProfileForm
+              profile={profile}
+              visible={showEditForm}
+              onClose={() => setShowEditForm(false)}
+              onSave={fetchProfile}
+            />
+          )}
+        </>
+      ) : (
+        <View className="bg-white rounded-2xl p-6 mb-6">
+          <Text className="text-text-secondary text-body-large">
+            Ingen profildata funnet
+          </Text>
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  const renderSubscriptionTab = () => (
+    <ScrollView className="flex-1 px-5">
+      {session?.user && (
+        <SubscriptionManager profileId={session.user.id} />
+      )}
+    </ScrollView>
+  );
+
+  const renderPreferencesTab = () => (
+    <ScrollView className="flex-1 px-5">
+      {session?.user && (
+        <>
+          <DietaryRequirements 
+            profileId={session.user.id} 
+            onChanges={(values) => handlePreferenceChange('dietary', values)}
+            setInitialValues={(values) => {
+              setOriginalPreferences(prev => ({...prev, dietary: values}));
+              setPreferenceChanges(prev => ({...prev, dietary: values}));
+            }}
+          />
+          <Allergies 
+            profileId={session.user.id}
+            onChanges={(values) => handlePreferenceChange('allergies', values)}
+            setInitialValues={(values) => {
+              setOriginalPreferences(prev => ({...prev, allergies: values}));
+              setPreferenceChanges(prev => ({...prev, allergies: values}));
+            }}
+          />
+          <FoodPreferences 
+            profileId={session.user.id}
+            onChanges={(values) => handlePreferenceChange('cuisines', values)}
+            setInitialValues={(values) => {
+              setOriginalPreferences(prev => ({...prev, cuisines: values}));
+              setPreferenceChanges(prev => ({...prev, cuisines: values}));
+            }}
+          />
+          <BudgetSettings 
+            profileId={session.user.id}
+            onChanges={(values) => handlePreferenceChange('budget', values)}
+            setInitialValues={(values) => {
+              setOriginalPreferences(prev => ({...prev, budget: values}));
+              setPreferenceChanges(prev => ({...prev, budget: values}));
+            }}
+          />
+          <PortionSettings 
+            profileId={session.user.id} 
+            onChanges={(value) => handlePreferenceChange('portions', value)}
+            setInitialValues={(value) => {
+              setOriginalPreferences(prev => ({...prev, portions: value}));
+              setPreferenceChanges(prev => ({...prev, portions: value}));
+            }}
+          />
+        </>
+      )}
+    </ScrollView>
+  );
+
+  // Render the active tab content
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'profile':
+        return renderProfileTab();
+      case 'subscription':
+        return renderSubscriptionTab();
+      case 'preferences':
+        return renderPreferencesTab();
+      default:
+        return renderProfileTab();
+    }
+  };
+
+  // Custom tab bar
+  const renderTabBar = () => (
+    <View className="flex-row bg-white border-b border-gray-200">
+      {tabs.map(tab => (
+        <TouchableOpacity
+          key={tab.key}
+          className="flex-1 py-3 items-center"
+          onPress={() => setActiveTab(tab.key)}
+          activeOpacity={0.7}
+        >
+          <Text 
+            className={`font-medium text-base ${
+              activeTab === tab.key 
+                ? 'text-primary-Green font-bold' 
+                : 'text-gray-500'
+            }`}
+          >
+            {tab.title}
+          </Text>
+          {activeTab === tab.key && (
+            <View className="absolute bottom-0 left-6 right-6 h-1 bg-primary-Green rounded-t-full" />
+          )}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-background pt-12">
@@ -259,146 +475,36 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background pt-12">
       <TopHeader />
-      <ScrollView className="flex-1">
-        <View className="px-5 py-8">
-          <Text className="font-heading-medium text-display-small text-primary-Black mb-4">
-            Min Profil
-          </Text>
-
-          {profile ? (
-            <>
-              <View className="bg-white rounded-2xl p-6 mb-4 shadow-sm">
-                <View className="flex-row items-center mb-6">
-                  <View className="w-16 h-16 bg-primary-Green/10 rounded-full items-center justify-center mb-2">
-                    <IconSymbol name="person.fill" size={32} color="#16A34A" />
-                  </View>
-                  <View className="ml-4">
-                    <Text className="text-primary-Black text-xl font-bold">{profile.full_name}</Text>
-                    <Text className="text-text-secondary">Sist oppdatert: {new Date(profile.updated_at).toLocaleDateString('no-NO')}</Text>
-                  </View>
-                </View>
-
-                <View className="flex-row flex-wrap -mx-2">
-                  <View className="w-1/2 px-2 mb-4">
-                    <View className="bg-gray-50 p-4 rounded-xl">
-                      <View className="flex-row items-center mb-2">
-                        <WeightIcon size={24} />
-                        <Text className="text-text-secondary text-body-medium ml-2">Vekt</Text>
-                      </View>
-                      <Text className="text-primary-Black text-xl font-semibold">{profile.weight} kg</Text>
-                    </View>
-                  </View>
-
-                  <View className="w-1/2 px-2 mb-4">
-                    <View className="bg-gray-50 p-4 rounded-xl">
-                      <View className="flex-row items-center mb-2">
-                        <HeightIcon size={24} />
-                        <Text className="text-text-secondary text-body-medium ml-2">Høyde</Text>
-                      </View>
-                      <Text className="text-primary-Black text-xl font-semibold">{profile.height} cm</Text>
-                    </View>
-                  </View>
-
-                  <View className="w-1/2 px-2">
-                    <View className="bg-gray-50 p-4 rounded-xl">
-                      <View className="flex-row items-center mb-2">
-                        <IconSymbol name="chevron.right" size={24} color="#16A34A" />
-                        <Text className="text-text-secondary text-body-medium ml-2">Alder</Text>
-                      </View>
-                      <Text className="text-primary-Black text-xl font-semibold">{profile.age} år</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              <Button
-                onPress={handleEditProfile}
-                className="mb-6"
-              >
-                Rediger Profil
-              </Button>
-
-              {/* Edit Profile Form Modal */}
-              {profile && (
-                <EditProfileForm
-                  profile={profile}
-                  visible={showEditForm}
-                  onClose={() => setShowEditForm(false)}
-                  onSave={fetchProfile}
-                />
-              )}
-            </>
-          ) : (
-            <View className="bg-white rounded-2xl p-6 mb-6">
-              <Text className="text-text-secondary text-body-large">
-                Ingen profildata funnet
-              </Text>
-            </View>
-          )}
-
-          {session?.user && (
-            <>
-              <DietaryRequirements 
-                profileId={session.user.id} 
-                onChanges={(values) => handlePreferenceChange('dietary', values)}
-                setInitialValues={(values) => {
-                  setOriginalPreferences(prev => ({...prev, dietary: values}));
-                  setPreferenceChanges(prev => ({...prev, dietary: values}));
-                }}
-              />
-              <Allergies 
-                profileId={session.user.id}
-                onChanges={(values) => handlePreferenceChange('allergies', values)}
-                setInitialValues={(values) => {
-                  setOriginalPreferences(prev => ({...prev, allergies: values}));
-                  setPreferenceChanges(prev => ({...prev, allergies: values}));
-                }}
-              />
-              <FoodPreferences 
-                profileId={session.user.id}
-                onChanges={(values) => handlePreferenceChange('cuisines', values)}
-                setInitialValues={(values) => {
-                  setOriginalPreferences(prev => ({...prev, cuisines: values}));
-                  setPreferenceChanges(prev => ({...prev, cuisines: values}));
-                }}
-              />
-              <BudgetSettings 
-                profileId={session.user.id}
-                onChanges={(values) => handlePreferenceChange('budget', values)}
-                setInitialValues={(values) => {
-                  setOriginalPreferences(prev => ({...prev, budget: values}));
-                  setPreferenceChanges(prev => ({...prev, budget: values}));
-                }}
-              />
-              <PortionSettings profileId={session.user.id} />
-
-              {hasPreferenceChanges() && (
-                <TouchableOpacity
-                  onPress={saveAllChanges}
-                  disabled={saving}
-                  className="bg-primary-Black py-[18px] rounded-full items-center flex-row justify-center mb-6"
-                >
-                  <Text className="text-white font-heading-medium text-body-large mr-2">
-                    {saving ? 'Lagrer...' : 'Lagre alle endringer'}
-                  </Text>
-                  <IconSymbol name="chevron.right" size={24} color="white" />
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-
-          <View className="flex items-center">
-            <TouchableOpacity
-              onPress={handleSignOut}
-              className={`${buttonStyles.secondary.base} w-full`}
-            >
-              <Text className={buttonStyles.secondary.text}>
-                Logg ut
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
+      <View className="px-5 py-4">
+        <Text className="font-heading-serif text-display-small text-primary-Black mb-4">
+          Min Profil
+        </Text>
+      </View>
+      
+      {renderTabBar()}
+      <View className="flex-1">
+        {renderTabContent()}
+      </View>
+      
+      <View className="p-5">
+        {activeTab === 'preferences' && hasPreferenceChanges() && (
+          <Button
+            onPress={saveAllChanges}
+            disabled={saving}
+            variant="secondary"
+            className="w-full mb-4"
+          >
+            {saving ? 'Lagrer...' : 'Lagre alle endringer'}
+          </Button>
+        )}
+        <Button
+          onPress={handleSignOut}
+          variant="outline"
+          className="w-full"
+        >
+          Logg ut
+        </Button>
+      </View>
     </SafeAreaView>
   );
 } 

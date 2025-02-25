@@ -30,12 +30,14 @@ export default function RecipesLayout() {
             headerShown: true,
             headerBackVisible: false,
             headerTitle: () => (
-              <Text className="font-heading-medium text-display-small text-primary-Black">
+              <Text className="font-heading-serif text-display-small text-primary-Black">
                 Oppskrifter
               </Text>
+              
             ),
           }}
         />
+        
         <Stack.Screen
           name="[id]"
           options={{

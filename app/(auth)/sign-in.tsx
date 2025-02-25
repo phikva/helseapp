@@ -355,11 +355,11 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background pt-24">
-      <View className="flex-1 px-6">
+    <SafeAreaView className="flex-1 pt-24">
+      <View className="flex-1 px-6 bg-light">
         {/* Header */}
         <View className="mb-6">
-          <Text className="text-display-large font-heading-medium leading-tight text-text">
+          <Text className="text-6xl font-heading-serif leading-tight text-primary-green">
             Logg inn her
           </Text>
           <Text className="text-body-large font-body text-text-secondary mt-2">
@@ -505,7 +505,7 @@ export default function SignInScreen() {
                   onPress={signInWithEmail}
                   disabled={loading || !magicLinkEmail}
                 >
-                  <Text className="text-center text-white text-body-large font-heading-medium">
+                  <Text className="text-center text-black text-body-large font-heading-medium">
                     {loading ? 'Sender...' : 'Send link'}
                   </Text>
                 </TouchableOpacity>
@@ -556,7 +556,7 @@ export default function SignInScreen() {
                   }}
                   disabled={loading || !phoneNumber || phoneNumber.replace(/\D/g, '').length < 8}
                 >
-                  <Text className="text-center text-white text-body-large font-heading-medium">
+                  <Text className="text-center text-black text-body-large font-heading-medium">
                     {loading ? 'Sender...' : 'Send kode'}
                   </Text>
                 </TouchableOpacity>
@@ -608,7 +608,7 @@ export default function SignInScreen() {
                   onPress={verifyPhoneNumber}
                   disabled={loading || !verificationCode}
                 >
-                  <Text className="text-center text-white text-body-large font-heading-medium">
+                  <Text className="text-center text-black text-body-large font-heading-medium">
                     {loading ? 'Verifiserer...' : 'Verifiser'}
                   </Text>
                 </TouchableOpacity>

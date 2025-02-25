@@ -19,8 +19,11 @@ export default defineType({
       type: 'image',
       options: {
         hotspot: true,
+        accept: 'image/svg+xml,image/*',
+        storeOriginalFilename: true,
+        metadata: ['exif', 'location', 'lqip', 'palette', 'blurhash'],
       },
-      description: 'Bilde for kategorien',
+      description: 'Bilde for kategorien (støtter også SVG-filer)',
     }),
   ],
 }) 

@@ -3,6 +3,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { useColorScheme } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { colors } from '../../lib/theme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -11,15 +12,15 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#22C55E', // primary.Green
-        tabBarInactiveTintColor: '#64748B', // text.secondary
+        tabBarActiveTintColor: colors.primary.green, // Using primary green from theme
+        tabBarInactiveTintColor: colors.text.secondary, // Using text secondary from theme
         tabBarStyle: {
           ...Platform.select({
             ios: {
-              backgroundColor: '#FFFFFF',
+              backgroundColor: colors.primary.light,
             },
             android: {
-              backgroundColor: '#FFFFFF',
+              backgroundColor: colors.primary.light,
               elevation: 0,
             },
           }),
@@ -31,6 +32,7 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 13,
           lineHeight: 20,
+          fontWeight: '500',
         },
       }}>
       <Tabs.Screen

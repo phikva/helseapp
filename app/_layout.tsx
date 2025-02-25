@@ -22,6 +22,8 @@ export default function RootLayout() {
     'SharpGrotesk-Bold20': require('../assets/fonts/SharpGrotesk-Bold20.ttf'),
     'SharpGrotesk-Medium20': require('../assets/fonts/SharpGrotesk-Medium20.ttf'),
     'SharpGrotesk-Book20': require('../assets/fonts/SharpGrotesk-Book20.ttf'),
+    // Montaga for serif headings
+    'Montaga-Regular': require('../assets/fonts/Montaga-Regular.ttf'),
     // Roboto for body text
     'Roboto-Regular': require('../assets/fonts/Roboto-Regular.ttf'),
     'Roboto-Medium': require('../assets/fonts/Roboto-Medium.ttf'),

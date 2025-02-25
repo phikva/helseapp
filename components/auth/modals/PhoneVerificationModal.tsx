@@ -30,7 +30,7 @@ export function PhoneVerificationModal({
     >
       <View className="flex-1 justify-center items-center bg-black/50">
         <View className="bg-background m-5 p-6 rounded-3xl w-full max-w-sm">
-          <Text className="text-display-small font-heading-medium mb-6 text-text">
+          <Text className="text-display-small font-heading-serif mb-6 text-text">
             Skriv inn kode
           </Text>
           
@@ -57,17 +57,17 @@ export function PhoneVerificationModal({
                 onVerificationCodeChange('')
               }}
             >
-              <Text className="text-center text-text text-body-large font-heading-medium">
+              <Text className="text-center text-text text-body-large serif">
                 Avbryt
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              className="flex-1 bg-primary-Black py-[14px] rounded-full"
+              className="flex-1 bg-primary-Black py-[14px] rounded-full text-text"
               onPress={onSubmit}
               disabled={loading || verificationCode.length !== 6}
             >
-              <Text className="text-center text-white text-body-large font-heading-medium">
+              <Text className="text-center text-black text-body-large font-heading-medium">
                 {loading ? 'Verifiserer...' : 'Bekreft'}
               </Text>
             </TouchableOpacity>

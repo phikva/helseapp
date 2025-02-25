@@ -26,7 +26,7 @@ export function SMSSignUpModal({
     >
       <View className="flex-1 justify-center items-center bg-black/50">
         <View className="bg-background m-5 p-6 rounded-3xl w-full max-w-sm">
-          <Text className="text-display-small font-heading-medium mb-6 text-text">
+          <Text className="text-display-small font-heading-serif mb-6 text-text">
             Få registreringskode
           </Text>
           
@@ -43,20 +43,20 @@ export function SMSSignUpModal({
 
           <View className="flex-row space-x-3">
             <TouchableOpacity 
-              className="flex-1 bg-text-secondary/10 py-[14px] rounded-full"
+              className="flex-1 bg-background-secondary py-[14px] rounded-full"
               onPress={onClose}
             >
-              <Text className="text-center text-text text-body-large font-heading-medium">
-                Avbryt
+              <Text className="text-center text-text text-body-large serif">
+                Avbryt!
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              className="flex-1 bg-primary-Black py-[14px] rounded-full"
+              className="flex-1 bg-primary-Black text-text py-[14px] rounded-full"
               onPress={onSubmit}
               disabled={loading || !phoneNumber || phoneNumber.replace(/\D/g, '').length < 8}
             >
-              <Text className="text-center text-white text-body-large font-heading-medium">
+              <Text className="text-center text-black text-body-large font-heading-medium">
                 {loading ? 'Sender...' : 'Send kode'}
               </Text>
             </TouchableOpacity>

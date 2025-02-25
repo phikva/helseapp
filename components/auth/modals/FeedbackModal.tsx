@@ -32,7 +32,7 @@ export function FeedbackModal({
                 {type === 'success' ? '✓' : '!'}
               </Text>
             </View>
-            <Text className="text-display-small font-heading-medium text-text text-center">
+            <Text className="text-display-small font-heading-serif text-text text-center">
               {title}
             </Text>
             <Text className="text-body-large font-body text-text-secondary text-center mt-2">
@@ -44,7 +44,7 @@ export function FeedbackModal({
             className={`${type === 'success' ? 'bg-primary-Green' : 'bg-red-500'} py-[14px] rounded-full`}
             onPress={onClose}
           >
-            <Text className="text-center text-text text-body-large font-heading-medium">
+            <Text className="text-center text-text text-body-large serif">
               {type === 'success' ? 'OK, jeg forstår' : 'Prøv igjen'}
             </Text>
           </TouchableOpacity>

@@ -1,0 +1,1 @@
+INSERT INTO "public"."portion_settings" ("id", "profile_id", "number_of_people", "created_at", "updated_at") VALUES ('ce3c4cd0-7d5b-4056-a03e-aa533d06aec6', '8b0898fe-9ab3-4498-8bb1-f00add7b4a78', '2', '2025-02-22 21:55:18.573632+00', '2025-02-22 21:55:18.573632+00');

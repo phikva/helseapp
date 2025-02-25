@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity, Dimensions, SafeAreaView } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { client, urlFor } from '@/lib/sanity';
 import { getCategoryWithRecipesQuery } from '@/lib/queries/categoryQueries';
 import { Ionicons } from '@expo/vector-icons';
+import { BackButton } from '../../../components/ui/BackButton';
+import { colors } from '../../../lib/theme';
 
 interface Recipe {
   _id: string;
@@ -32,11 +34,13 @@ const PaginationDots = ({ total, current }: { total: number; current: number }) 
     {Array.from({ length: total }).map((_, index) => (
       <View
         key={index}
-        className={`h-1.5 rounded-full ${
-          index === current 
-            ? 'w-4 bg-primary-Green' 
-            : 'w-1.5 bg-gray-300'
-        }`}
+        style={{
+          height: 8,
+          borderRadius: 4,
+          width: index === current ? 24 : 8,
+          backgroundColor: index === current ? colors.primary.green : '#D1D1D6',
+          marginHorizontal: 2
+        }}
       />
     ))}
   </View>
@@ -54,7 +58,7 @@ const RecipeCard = ({ recipe, onPress }: { recipe: Recipe; onPress: () => void }
       resizeMode="cover"
     />
     <View className="p-4">
-      <Text className="font-heading-medium text-xl" numberOfLines={1}>
+      <Text className="font-heading-serif text-xl" numberOfLines={1}>
         {recipe.tittel}
       </Text>
       <Text className="text-text-secondary text-lg mt-1">
@@ -98,7 +102,7 @@ export default function CategoryScreen() {
   const renderListCard = (recipe: Recipe) => (
     <TouchableOpacity
       key={recipe._id}
-      className="bg-white rounded-lg shadow-md overflow-hidden mb-4"
+      className="bg-white rounded-2xl shadow-sm overflow-hidden mb-4"
       onPress={() => {
         router.push({
           pathname: '/recipes/[id]',
@@ -112,12 +116,12 @@ export default function CategoryScreen() {
         resizeMode="cover"
       />
       <View className="p-4">
-        <Text className="text-xl font-semibold mb-2">{recipe.tittel}</Text>
-        <Text className="text-gray-600">Kalorier: {recipe.totalKcal} kcal</Text>
+        <Text className="font-heading-serif text-xl mb-2">{recipe.tittel}</Text>
+        <Text className="text-text-secondary">Kalorier: {recipe.totalKcal} kcal</Text>
         <View className="flex-row justify-between mt-2">
-          <Text className="text-gray-600">Protein: {recipe.totalMakros.protein}g</Text>
-          <Text className="text-gray-600">Karbohydrater: {recipe.totalMakros.karbs}g</Text>
-          <Text className="text-gray-600">Fett: {recipe.totalMakros.fett}g</Text>
+          <Text className="text-text-secondary">Protein: {recipe.totalMakros.protein}g</Text>
+          <Text className="text-text-secondary">Karbohydrater: {recipe.totalMakros.karbs}g</Text>
+          <Text className="text-text-secondary">Fett: {recipe.totalMakros.fett}g</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -125,106 +129,133 @@ export default function CategoryScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" color="#0891b2" />
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+        <Stack.Screen 
+          options={{
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: colors.primary.light },
+            headerLeft: () => <BackButton onPress={() => router.back()} />,
+            headerTitle: () => (
+              <View style={{ height: 40 }}>
+                <Text style={{ fontFamily: 'Montaga-Regular' }}>Kategori</Text>
+              </View>
+            ),
+          }} 
+        />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color={colors.primary.green} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error || !category) {
     return (
-      <View className="flex-1 justify-center items-center p-4">
-        <Text className="text-red-500 text-center">{error || 'Kategori ikke funnet'}</Text>
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          className="mt-4 bg-cyan-600 px-4 py-2 rounded-lg"
-        >
-          <Text className="text-white">Gå tilbake</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+        <Stack.Screen 
+          options={{
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: colors.primary.light },
+            headerLeft: () => <BackButton onPress={() => router.back()} />,
+            headerTitle: () => (
+              <View style={{ height: 40 }}>
+                <Text style={{ fontFamily: 'Montaga-Regular' }}>Kategori</Text>
+              </View>
+            ),
+          }} 
+        />
+        <View className="flex-1 justify-center items-center p-4">
+          <Text className="text-red-500 text-center">{error || 'Fant ikke kategorien'}</Text>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            className="mt-4 bg-primary-green px-4 py-2 rounded-lg"
+          >
+            <Text className="text-white">Gå tilbake</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
       <Stack.Screen 
         options={{
           title: category.name,
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: 'white' },
-          headerLeft: () => (
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              className="flex-row items-center"
-            >
-              <Ionicons name="chevron-back" size={24} color="#0891b2" />
-              <Text className="text-cyan-600 ml-1">Tilbake</Text>
-            </TouchableOpacity>
-          ),
+          headerStyle: { backgroundColor: colors.primary.light },
+          headerTitleStyle: { fontFamily: 'Montaga-Regular' },
+          headerLeft: () => <BackButton onPress={() => router.back()} />,
         }} 
       />
       
-      <View className="px-4 border-b border-gray-200">
-        <View className="flex-row justify-between items-center mb-4">
-          <Text className="text-2xl font-bold">{category.name} oppskrifter</Text>
-          <View className="flex-row space-x-2">
-            <TouchableOpacity
-              onPress={() => setViewMode('list')}
-              className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-cyan-100' : 'bg-gray-100'}`}
-            >
-              <Ionicons 
-                name="list" 
-                size={24} 
-                color={viewMode === 'list' ? '#0891b2' : '#666'} 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setViewMode('grid')}
-              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-cyan-100' : 'bg-gray-100'}`}
-            >
-              <Ionicons 
-                name="grid" 
-                size={24} 
-                color={viewMode === 'grid' ? '#0891b2' : '#666'} 
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {viewMode === 'list' ? (
-        <ScrollView className="flex-1 px-4">
-          <View className="space-y-4 py-4">
-            {category.recipes.map((recipe) => renderListCard(recipe))}
-          </View>
-        </ScrollView>
-      ) : (
-        <View className="flex-1 justify-center">
-          <View className="px-4">
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              onScroll={(e) => handleScroll(e)}
-              scrollEventThrottle={16}
-              pagingEnabled
-              decelerationRate="fast"
-              snapToInterval={320 + 16}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
-            >
-              {category.recipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe._id}
-                  recipe={recipe}
-                  onPress={() => router.push(`/recipes/${recipe._id}`)}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="px-4 pt-1">
+          <Text className="text-4xl font-heading-serif mb-3">{category.name}</Text>
+          
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="body-regular text-lg text-text-secondary">
+              {category.recipes.length} oppskrifter
+            </Text>
+            <View className="flex-row space-x-2">
+              <TouchableOpacity
+                onPress={() => setViewMode('list')}
+                className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-primary-green/20' : 'bg-gray-100'}`}
+              >
+                <Ionicons 
+                  name="list" 
+                  size={24} 
+                  color={viewMode === 'list' ? colors.primary.green : colors.text.secondary} 
                 />
-              ))}
-            </ScrollView>
-            <View className="mt-6">
-              <PaginationDots total={category.recipes.length} current={currentRecipe} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setViewMode('grid')}
+                className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-primary-green/20' : 'bg-gray-100'}`}
+              >
+                <Ionicons 
+                  name="grid" 
+                  size={24} 
+                  color={viewMode === 'grid' ? colors.primary.green : colors.text.secondary} 
+                />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
-      )}
-    </View>
+
+        {viewMode === 'list' ? (
+          <View className="px-4">
+            <View className="space-y-4 py-4">
+              {category.recipes.map((recipe) => renderListCard(recipe))}
+            </View>
+          </View>
+        ) : (
+          <View className="flex-1 justify-center">
+            <View className="px-4">
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                onScroll={(e) => handleScroll(e)}
+                scrollEventThrottle={16}
+                pagingEnabled
+                decelerationRate="fast"
+                snapToInterval={320 + 16}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              >
+                {category.recipes.map((recipe) => (
+                  <RecipeCard
+                    key={recipe._id}
+                    recipe={recipe}
+                    onPress={() => router.push(`/recipes/${recipe._id}`)}
+                  />
+                ))}
+              </ScrollView>
+              <View className="mt-6">
+                <PaginationDots total={category.recipes.length} current={currentRecipe} />
+              </View>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 } 

@@ -1,0 +1,1 @@
+INSERT INTO "public"."profiles" ("id", "full_name", "weight", "height", "age", "updated_at", "subscription_id") VALUES ('8b0898fe-9ab3-4498-8bb1-f00add7b4a78', 'Philip Kvam', '150', '170', '32', '2025-02-23 20:01:01.558+00', null);

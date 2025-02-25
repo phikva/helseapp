@@ -10,11 +10,14 @@ interface PortionSetting {
 
 interface PortionSettingsProps {
   profileId: string;
+  onChanges?: (value: number) => void;
+  setInitialValues?: (value: number) => void;
 }
 
-export default function PortionSettings({ profileId }: PortionSettingsProps) {
+export default function PortionSettings({ profileId, onChanges, setInitialValues }: PortionSettingsProps) {
   const [portions, setPortions] = useState<PortionSetting | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialValue, setInitialValue] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPortions();
@@ -31,6 +34,10 @@ export default function PortionSettings({ profileId }: PortionSettingsProps) {
       if (error && error.code !== 'PGRST116') throw error;
       if (data) {
         setPortions(data);
+        setInitialValue(data.number_of_people);
+        if (setInitialValues) {
+          setInitialValues(data.number_of_people);
+        }
       }
     } catch (error) {
       console.error('Error fetching portions:', error);
@@ -59,7 +66,11 @@ export default function PortionSettings({ profileId }: PortionSettingsProps) {
         if (error) throw error;
       }
 
-      await fetchPortions();
+      setPortions({...portions, number_of_people: numberOfPeople} as PortionSetting);
+      
+      if (onChanges) {
+        onChanges(numberOfPeople);
+      }
     } catch (error) {
       console.error('Error updating portions:', error);
     }
@@ -67,7 +78,7 @@ export default function PortionSettings({ profileId }: PortionSettingsProps) {
 
   return (
     <View className="mb-20">
-      <Text className="font-heading-medium text-display-small text-primary-Black mb-2">Antall porsjoner</Text>
+      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">Antall porsjoner</Text>
       <Text className="text-text-secondary text-body-large mb-6">
         Hvor mange personer lager du vanligvis mat til?
       </Text>

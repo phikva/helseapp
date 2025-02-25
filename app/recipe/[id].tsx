@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { client, urlFor } from '../../lib/sanity';
 import { getRecipeByIdQuery } from '../../lib/queries/recipeQueries';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { BackButton } from '../../components/ui/BackButton';
 
 interface Recipe {
   _id: string;
@@ -72,25 +74,15 @@ export default function RecipeScreen() {
     return (
       <View className="flex-1 justify-center items-center p-4">
         <Text className="text-red-500 text-center">{error || 'Recipe not found'}</Text>
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          className="mt-4 bg-cyan-600 px-4 py-2 rounded-lg"
-        >
-          <Text className="text-white">Go Back</Text>
-        </TouchableOpacity>
+        <BackButton />
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-white">
-      <Stack.Screen 
-        options={{
-          title: recipe.tittel,
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: 'white' },
-        }} 
-      />
+      <ScreenHeader title={recipe.tittel} />
+      
       <ScrollView>
         <Image
           source={{ uri: urlFor(recipe.image).width(400).height(200).url() }}

@@ -12,7 +12,6 @@ export const schemaTypes = [
   oppskrift,
   kategori,
   tier,
-
   
   // Page structure
   pageSchema,

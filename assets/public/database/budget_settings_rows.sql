@@ -1,0 +1,1 @@
+INSERT INTO "public"."budget_settings" ("id", "profile_id", "amount", "period", "created_at", "updated_at") VALUES ('e918a909-ce5c-4705-b823-e098c49e6d3f', '8b0898fe-9ab3-4498-8bb1-f00add7b4a78', '5000', 'monthly', '2025-02-22 22:46:21.373896+00', '2025-02-22 22:46:21.373896+00');

@@ -114,7 +114,7 @@ export default function EditProfileForm({ profile, visible, onClose, onSave }: E
         <View className="bg-white rounded-t-3xl p-6 h-5/6">
           <ScrollView>
             <View className="flex-row justify-between items-center mb-8">
-              <Text className="font-heading-medium text-display-small text-primary-Black">
+              <Text className="font-heading-serif text-display-small text-primary-Black">
                 Rediger Profil
               </Text>
               <TouchableOpacity onPress={onClose}>

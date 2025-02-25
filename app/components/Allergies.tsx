@@ -78,7 +78,7 @@ export default function Allergies({ profileId, onChanges, setInitialValues }: Al
 
   return (
     <View className="mb-20">
-      <Text className="font-heading-medium text-display-small text-primary-Black mb-2">Allergier</Text>
+      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">Allergier</Text>
       <Text className="text-text-secondary text-body-large mb-6">Velg dine allergier</Text>
       
       <View className="flex-row flex-wrap gap-2">

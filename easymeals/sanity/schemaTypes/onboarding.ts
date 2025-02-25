@@ -21,11 +21,15 @@ export const onboardingScreenSchema = defineType({
     }),
     defineField({
       name: 'image',
-      title: 'Image',
+      title: 'Bilde',
       type: 'image',
       options: {
         hotspot: true,
+        accept: 'image/svg+xml,image/*',
+        storeOriginalFilename: true,
+        metadata: ['exif', 'location', 'lqip', 'palette', 'blurhash'],
       },
+      description: 'Bilde for onboarding-steget (støtter også SVG-filer)',
       validation: Rule => Rule.required()
     }),
     defineField({

@@ -6,7 +6,8 @@ import { Feather } from '@expo/vector-icons';
 import { TopHeader } from '@components/ui/TopHeader';
 import { client, urlFor } from '@/lib/sanity';
 import { useRouter } from 'expo-router';
-import HomeScreenSkeleton from '../components/skeleton/HomeScreenSkeleton';
+import HomeScreenSkeleton from '../components/skeleton/HomeScreenSkeleton'
+import { colors } from '../../lib/theme';
 
 interface Recipe {
   _id: string;
@@ -32,11 +33,13 @@ const PaginationDots = ({ total, current }: { total: number; current: number }) 
     {Array.from({ length: total }).map((_, index) => (
       <View
         key={index}
-        className={`h-1.5 rounded-full ${
-          index === current 
-            ? 'w-4 bg-primary-Green' 
-            : 'w-1.5 bg-gray-300'
-        }`}
+        style={{
+          height: 8,
+          borderRadius: 4,
+          width: index === current ? 24 : 8,
+          backgroundColor: index === current ? colors.primary.green : '#D1D1D6',
+          marginHorizontal: 2
+        }}
       />
     ))}
   </View>
@@ -54,7 +57,7 @@ const RecipeCard = ({ recipe, onPress }: { recipe: Recipe; onPress: () => void }
       resizeMode="cover"
     />
     <View className="p-2">
-      <Text className="font-heading-medium text-body-large" numberOfLines={1}>
+      <Text className="font-heading-serif text-body-large" numberOfLines={1}>
         {recipe.tittel}
       </Text>
       <Text className="text-text-secondary text-body-small">
@@ -78,7 +81,7 @@ const CategoryCard = ({ category, onPress }: { category: Category; onPress: () =
       />
     )}
     <View className="p-3">
-      <Text className="font-heading-medium text-body-large" numberOfLines={1}>
+      <Text className="font-heading-serif text-2xl" numberOfLines={1}>
         {category.name}
       </Text>
       {category.description && (
@@ -167,13 +170,13 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background pt-12">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
       <TopHeader />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-4 pt-8">
           {/* Categories Section */}
           <View className="flex-row items-center justify-between pt-4">
-            <Text className="text-3xl font-heading-medium">Kategorier</Text>
+            <Text className="text-4xl font-heading-serif">Kategorier</Text>
           </View>
 
           <View className="mt-4">
@@ -201,7 +204,7 @@ export default function HomeScreen() {
 
           {/* Inspiration Section */}
           <View className="mt-6">
-            <Text className="text-3xl font-heading-medium mb-2">Trenger du inspirasjon?</Text>
+            <Text className="text-4xl font-heading-serif mb-2">Trenger du inspirasjon?</Text>
             <Text className="body-regular text-lg text-text-secondary mb-2">Bli inspirert av disse oppskriftene</Text>
 
             <ScrollView 
@@ -226,7 +229,7 @@ export default function HomeScreen() {
 
           {/* Popular Recipes Section */}
           <View className="mt-6">
-            <Text className="text-3xl font-heading-medium mb-2">Populære oppskrifter</Text>
+            <Text className="text-4xl font-heading-serif mb-2">Populære oppskrifter</Text>
             <Text className="body-regular text-lg text-text-secondary mb-2">De mest populære oppskriftene</Text>
 
             <ScrollView 
@@ -251,7 +254,7 @@ export default function HomeScreen() {
 
           {/* Recent Recipes Section */}
           <View className="mt-6 mb-6">
-            <Text className="text-3xl font-heading-medium mb-2">Nyeste oppskrifter</Text>
+            <Text className="text-4xl font-heading-serif mb-2">Nyeste oppskrifter</Text>
             <Text className="body-regular text-lg text-text-secondary mb-2">Nylig lagt til</Text>
             <ScrollView 
               horizontal 

@@ -109,7 +109,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <IconSymbol name={getToastIcon(toast.type)} size={24} color="white" />
             <View className="flex-1 ml-3">
               {toast.title && (
-                <Text className="text-white font-heading-medium text-body-large mb-1">
+                <Text className="text-white font-heading-serif text-body-large mb-1">
                   {toast.title}
                 </Text>
               )}

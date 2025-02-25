@@ -1,23 +1,56 @@
 import { defineField, defineType } from 'sanity'
-import { TierIcon } from './icons'
+import { TagIcon } from '@sanity/icons'
 
 export default defineType({
   name: 'tier',
-  title: 'Abonnementsnivå',
+  title: 'Abonnement',
   type: 'document',
-  icon: TierIcon,
+  icon: TagIcon,
   fields: [
     defineField({
       name: 'name',
-      title: 'Navn på nivå',
+      title: 'Navn',
       type: 'string',
-      description: 'Navn på abonnementsnivået (f.eks. Nivå 1, Nivå 2, Nivå 3)',
+      description: 'Navn på abonnementet (f.eks. Basis, Premium, Pro)',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'slug',
+      title: 'Slug',
+      type: 'slug',
+      description: 'Unik identifikator for abonnementet (f.eks. basis, premium, pro)',
+      options: {
+        source: 'name',
+        maxLength: 96,
+      },
+      validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: 'description',
       title: 'Beskrivelse',
       type: 'text',
-      description: 'Kort beskrivelse av abonnementsnivået og dets fordeler',
+      description: 'Kort beskrivelse av abonnementet og dets fordeler',
+    }),
+    defineField({
+      name: 'price',
+      title: 'Pris',
+      type: 'number',
+      description: 'Månedlig pris i NOK',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'features',
+      title: 'Funksjoner',
+      type: 'array',
+      of: [{ type: 'string' }],
+      description: 'Liste over funksjoner som er inkludert i abonnementet',
+    }),
+    defineField({
+      name: 'isDefault',
+      title: 'Standard abonnement',
+      type: 'boolean',
+      description: 'Sett til true hvis dette er standardabonnementet for nye brukere',
+      initialValue: false,
     }),
     defineField({
       name: 'recipeAccess',
@@ -83,6 +116,7 @@ export default defineType({
           description: 'Maksimalt antall oppskrifter som kan lagres som favoritter (eller "uendelig" for full tilgang)',
           options: {
             list: [
+              { title: '5 favoritter', value: '5' },
               { title: '20 favoritter', value: '20' },
               { title: '50 favoritter', value: '50' },
               { title: 'Uendelig', value: 'uendelig' },
@@ -96,7 +130,21 @@ export default defineType({
       name: 'expertMealPlanning',
       title: 'Ekspert måltidsplanlegging',
       type: 'boolean',
-      description: 'Tilgang til ukentlige måltidsplaner fra en ekspert (kun for Nivå 3)',
+      description: 'Tilgang til ukentlige måltidsplaner fra en ekspert',
     }),
   ],
+  preview: {
+    select: {
+      title: 'name',
+      subtitle: 'price',
+      isDefault: 'isDefault',
+    },
+    prepare(selection) {
+      const { title, subtitle, isDefault } = selection
+      return {
+        title,
+        subtitle: `${subtitle} NOK/mnd ${isDefault ? '(Standard)' : ''}`,
+      }
+    },
+  },
 }) 
