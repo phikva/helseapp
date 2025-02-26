@@ -84,4 +84,8 @@ export const useCartStore = create<CartState>()(
       name: 'cart-storage',
     }
   )
-); 
+);
+
+// Add a default export for the cart store
+const cartStore = { useCartStore };
+export default cartStore; 

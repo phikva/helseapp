@@ -1,6 +1,8 @@
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import BudgetSettingsSkeleton from './skeleton/BudgetSettingsSkeleton';
+import { useProfileStore } from '../../lib/store/profileStore';
 
 interface BudgetSetting {
   id: string;
@@ -12,16 +14,28 @@ interface BudgetSettingsProps {
   profileId: string;
   onChanges?: (values: { amount: string; period: 'weekly' | 'monthly' }) => void;
   setInitialValues?: (values: { amount: string; period: 'weekly' | 'monthly' }) => void;
+  cachedData?: boolean;
 }
 
-export default function BudgetSettings({ profileId, onChanges, setInitialValues }: BudgetSettingsProps) {
+export default function BudgetSettings({ profileId, onChanges, setInitialValues, cachedData = false }: BudgetSettingsProps) {
   const [budget, setBudget] = useState<BudgetSetting | null>(null);
   const [amount, setAmount] = useState('');
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly');
   const [loading, setLoading] = useState(true);
+  const { budgetSettings } = useProfileStore();
 
   useEffect(() => {
-    fetchBudget();
+    if (cachedData && budgetSettings) {
+      // Use cached data from the store
+      setBudget(budgetSettings);
+      setAmount(budgetSettings.amount.toString());
+      setPeriod(budgetSettings.period as 'weekly' | 'monthly');
+      setInitialValues?.({ amount: budgetSettings.amount.toString(), period: budgetSettings.period as 'weekly' | 'monthly' });
+      setLoading(false);
+    } else {
+      // Fetch from API if no cached data
+      fetchBudget();
+    }
   }, []);
 
   const fetchBudget = async () => {
@@ -56,9 +70,13 @@ export default function BudgetSettings({ profileId, onChanges, setInitialValues 
     onChanges?.({ amount, period: newPeriod });
   };
 
+  if (loading) {
+    return <BudgetSettingsSkeleton />;
+  }
+
   return (
     <View className="mb-20">
-      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">Matbudsjett</Text>
+      <Text className="font-heading-serif text-display-small text-primary-black mb-2">Matbudsjett</Text>
       <Text className="text-text-secondary text-body-large mb-6">
         Sett ditt ukentlige eller månedlige matbudsjett
       </Text>
@@ -79,7 +97,7 @@ export default function BudgetSettings({ profileId, onChanges, setInitialValues 
           <TouchableOpacity
             onPress={() => handlePeriodChange('weekly')}
             className={`flex-1 px-4 py-2 rounded-full ${
-              period === 'weekly' ? 'bg-primary-Green' : 'bg-gray-200'
+              period === 'weekly' ? 'bg-primary-purple' : 'bg-gray-200'
             }`}
           >
             <Text className={`text-center text-body-large font-heading-medium ${
@@ -92,7 +110,7 @@ export default function BudgetSettings({ profileId, onChanges, setInitialValues 
           <TouchableOpacity
             onPress={() => handlePeriodChange('monthly')}
             className={`flex-1 px-4 py-2 rounded-full ${
-              period === 'monthly' ? 'bg-primary-Green' : 'bg-gray-200'
+              period === 'monthly' ? 'bg-primary-purple' : 'bg-gray-200'
             }`}
           >
             <Text className={`text-center text-body-large font-heading-medium ${

@@ -13,6 +13,13 @@ const ICON_MAPPING = {
   'chevron.right': 'chevron-forward',
   'chevron.up': 'chevron-up',
   'chevron.down': 'chevron-down',
+  'bell.fill': 'notifications',
+  'moon.fill': 'moon',
+  'hand.raised.fill': 'hand-left',
+  'questionmark.circle.fill': 'help-circle',
+  'trash.fill': 'trash',
+  'arrow.right.square.fill': 'log-out',
+  'checkmark.circle.fill': 'checkmark-circle',
 } as const;
 
 export type IconSymbolName = keyof typeof ICON_MAPPING;

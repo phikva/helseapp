@@ -135,11 +135,7 @@ export default function CategoryScreen() {
             headerShadowVisible: false,
             headerStyle: { backgroundColor: colors.primary.light },
             headerLeft: () => <BackButton onPress={() => router.back()} />,
-            headerTitle: () => (
-              <View style={{ height: 40 }}>
-                <Text style={{ fontFamily: 'Montaga-Regular' }}>Kategori</Text>
-              </View>
-            ),
+
           }} 
         />
         <View className="flex-1 justify-center items-center">
@@ -178,50 +174,50 @@ export default function CategoryScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 0 }}>
       <Stack.Screen 
         options={{
           title: category.name,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.primary.light },
-          headerTitleStyle: { fontFamily: 'Montaga-Regular' },
+          headerTitleStyle: { fontFamily: 'Montaga-Regular', fontSize: 32 },
           headerLeft: () => <BackButton onPress={() => router.back()} />,
         }} 
       />
       
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-4 pt-1">
-          <Text className="text-4xl font-heading-serif mb-3">{category.name}</Text>
-          
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="body-regular text-lg text-text-secondary">
-              {category.recipes.length} oppskrifter
-            </Text>
-            <View className="flex-row space-x-2">
-              <TouchableOpacity
-                onPress={() => setViewMode('list')}
-                className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-primary-green/20' : 'bg-gray-100'}`}
-              >
-                <Ionicons 
-                  name="list" 
-                  size={24} 
-                  color={viewMode === 'list' ? colors.primary.green : colors.text.secondary} 
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setViewMode('grid')}
-                className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-primary-green/20' : 'bg-gray-100'}`}
-              >
-                <Ionicons 
-                  name="grid" 
-                  size={24} 
-                  color={viewMode === 'grid' ? colors.primary.green : colors.text.secondary} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+      <View className="px-4 pt-1">
+        <Text className="text-5xl font-heading-serif mb-1">{category.name}</Text>
+        <Text className="body-regular text-lg text-text-secondary mb-2">
+          {category.recipes.length} oppskrifter
+        </Text>
+      </View>
+      
+      <View className="px-4 mb-4 flex-row justify-end">
+        <View className="flex-row space-x-2">
+          <TouchableOpacity
+            onPress={() => setViewMode('list')}
+            className={`p-1.5 rounded-lg ${viewMode === 'list' ? 'bg-primary-green/20' : 'bg-gray-100'}`}
+          >
+            <Ionicons 
+              name="list" 
+              size={20} 
+              color={viewMode === 'list' ? colors.primary.green : colors.text.secondary} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setViewMode('grid')}
+            className={`p-1.5 rounded-lg ${viewMode === 'grid' ? 'bg-primary-green/20' : 'bg-gray-100'}`}
+          >
+            <Ionicons 
+              name="grid" 
+              size={20} 
+              color={viewMode === 'grid' ? colors.primary.green : colors.text.secondary} 
+            />
+          </TouchableOpacity>
         </View>
-
+      </View>
+      
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {viewMode === 'list' ? (
           <View className="px-4">
             <View className="space-y-4 py-4">

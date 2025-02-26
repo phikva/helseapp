@@ -56,13 +56,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const getToastStyle = (type: ToastType) => {
     switch (type) {
       case 'success':
-        return 'bg-primary-Green';
+        return 'bg-white border-l-4 border-primary-green';
       case 'error':
-        return 'bg-red-500';
+        return 'bg-white border-l-4 border-red-500';
       case 'info':
-        return 'bg-blue-500';
+        return 'bg-white border-l-4 border-blue-500';
       default:
-        return 'bg-gray-800';
+        return 'bg-white border-l-4 border-gray-500';
     }
   };
 
@@ -76,6 +76,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         return 'info.circle.fill';
       default:
         return 'info.circle.fill';
+    }
+  };
+
+  const getIconColor = (type: ToastType) => {
+    switch (type) {
+      case 'success':
+        return '#4A6C62'; // primary-green
+      case 'error':
+        return '#EF4444'; // red-500
+      case 'info':
+        return '#3B82F6'; // blue-500
+      default:
+        return '#6B7280'; // gray-500
     }
   };
 
@@ -106,14 +119,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             onPress={hideToast}
             className={`${getToastStyle(toast.type)} rounded-2xl p-4 shadow-lg flex-row items-center`}
           >
-            <IconSymbol name={getToastIcon(toast.type)} size={24} color="white" />
+            <IconSymbol name={getToastIcon(toast.type)} size={24} color={getIconColor(toast.type)} />
             <View className="flex-1 ml-3">
               {toast.title && (
-                <Text className="text-white font-heading-serif text-body-large mb-1">
+                <Text className="text-primary-black font-heading-serif text-body-large mb-1">
                   {toast.title}
                 </Text>
               )}
-              <Text className="text-white font-body text-body-medium">
+              <Text className="text-text-secondary font-body text-body-medium">
                 {toast.message}
               </Text>
             </View>

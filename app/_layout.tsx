@@ -10,6 +10,8 @@ import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useInitAuth } from '@hooks/useInitAuth';
 import { ToastProvider } from './components/ui/Toast';
+import { ProfileProvider } from '../lib/store/profileStore';
+import { ContentProvider } from '../lib/store/contentStore';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -94,17 +96,21 @@ export default function RootLayout() {
       <View style={{ flex: 1, backgroundColor: '#fff' }}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <ToastProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: '#fff' },
-              }}
-            >
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
-            </Stack>
-            <StatusBar style="dark" />
+            <ProfileProvider>
+              <ContentProvider>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: '#fff' },
+                  }}
+                >
+                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
+                </Stack>
+                <StatusBar style="dark" />
+              </ContentProvider>
+            </ProfileProvider>
           </ToastProvider>
         </ThemeProvider>
       </View>

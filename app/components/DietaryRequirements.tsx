@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { client } from '../../lib/sanity';
 import { kostholdsbehovQuery } from '../../lib/queries/brukerprofilQueries';
+import DietaryRequirementsSkeleton from './skeleton/DietaryRequirementsSkeleton';
+import { useProfileStore } from '../../lib/store/profileStore';
 
 interface DietaryRequirement {
   id: string;
@@ -19,6 +21,7 @@ interface DietaryRequirementsProps {
   profileId: string;
   onChanges: (values: Set<string>) => void;
   setInitialValues: (values: Set<string>) => void;
+  cachedData?: boolean;
 }
 
 // Map Sanity values to Supabase enum values
@@ -34,15 +37,26 @@ const mapToSupabaseEnum = (sanityValue: string): string => {
   return mapping[sanityValue] || sanityValue;
 };
 
-export default function DietaryRequirements({ profileId, onChanges, setInitialValues }: DietaryRequirementsProps) {
+export default function DietaryRequirements({ profileId, onChanges, setInitialValues, cachedData = false }: DietaryRequirementsProps) {
   const [requirements, setRequirements] = useState<DietaryRequirement[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [kostholdsbehovOptions, setKostholdsbehovOptions] = useState<KostholdsbehovItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const { dietaryRequirements } = useProfileStore();
 
   useEffect(() => {
-    fetchDietaryRequirements();
     fetchKostholdsbehovOptions();
+    
+    if (cachedData && dietaryRequirements.length > 0) {
+      // Use cached data from the store
+      setRequirements(dietaryRequirements);
+      const initialValues = new Set(dietaryRequirements.map(req => req.requirement_type) || []);
+      setSelectedTypes(initialValues);
+      setInitialValues(initialValues);
+    } else {
+      // Fetch from API if no cached data
+      fetchDietaryRequirements();
+    }
   }, []);
 
   const fetchKostholdsbehovOptions = async () => {
@@ -89,16 +103,12 @@ export default function DietaryRequirements({ profileId, onChanges, setInitialVa
   };
 
   if (loading || !kostholdsbehovOptions.length) {
-    return (
-      <View className="mb-6">
-        <Text className="text-text-secondary text-body-medium mb-3">Laster kostholdsbehov...</Text>
-      </View>
-    );
+    return <DietaryRequirementsSkeleton />;
   }
 
   return (
     <View className="mb-20">
-      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">Kostholdsbehov</Text>
+      <Text className="font-heading-serif text-display-small text-primary-black mb-2">Kostholdsbehov</Text>
       <Text className="text-text-secondary text-body-large mb-6">
         Velg dine kostholdsbehov
       </Text>
@@ -112,7 +122,7 @@ export default function DietaryRequirements({ profileId, onChanges, setInitialVa
               key={option.verdi}
               onPress={() => toggleSelection(option.verdi)}
               className={`px-4 py-2 rounded-full ${
-                isSelected ? 'bg-primary-Green' : 'bg-gray-200'
+                isSelected ? 'bg-primary-purple' : 'bg-gray-200'
               }`}
             >
               <Text className={`

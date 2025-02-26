@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { client, urlFor } from '@/lib/sanity';
-import { getAllCategoriesQuery } from '@/lib/queries/categoryQueries';
+import { urlFor } from '@/lib/sanity';
 import { useRouter } from 'expo-router';
 import CategoryListSkeleton from './skeleton/CategoryListSkeleton';
 import { colors } from '../../lib/theme';
+import { useContentStore } from '../../lib/store/contentStore';
 
 // Define the Category type
 interface Category {
@@ -16,37 +16,36 @@ interface Category {
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/200x150.png?text=No+Image';
 
 export default function CategoryList() {
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { categories, isLoading: contentLoading, error: contentError, refreshContent, isCacheStale } = useContentStore();
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const data = await client.fetch(getAllCategoriesQuery);
-      setCategories(data);
+    const loadCategories = async () => {
+      setLoading(true);
+      
+      // Check if cache is stale and refresh if needed
+      if (isCacheStale()) {
+        await refreshContent();
+      }
+      
       setLoading(false);
-    } catch (err) {
-      setError('Failed to load categories');
-      setLoading(false);
-      console.error('Error fetching categories:', err);
-    }
-  };
+    };
+    
+    loadCategories();
+  }, [isCacheStale, refreshContent]);
 
-  if (loading) {
+  if (loading || contentLoading) {
     return <CategoryListSkeleton />;
   }
 
-  if (error) {
+  if (error || contentError) {
     return (
       <View className="flex-1 justify-center items-center p-4">
-        <Text className="text-red-500 text-center">{error}</Text>
+        <Text className="text-red-500 text-center">{error || contentError}</Text>
         <TouchableOpacity 
-          onPress={fetchCategories}
+          onPress={refreshContent}
           className="mt-4 bg-primary-green px-4 py-2 rounded-lg"
         >
           <Text className="text-white">Retry</Text>
@@ -61,7 +60,7 @@ export default function CategoryList() {
     
         
         <View className="flex-row flex-wrap justify-between">
-          {categories.map((category) => (
+          {(categories || []).map((category) => (
             <TouchableOpacity
               key={category._id}
               className="w-[48%] mb-4 rounded-2xl overflow-hidden bg-white shadow-sm"

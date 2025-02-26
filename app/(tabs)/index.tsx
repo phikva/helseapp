@@ -8,6 +8,7 @@ import { client, urlFor } from '@/lib/sanity';
 import { useRouter } from 'expo-router';
 import HomeScreenSkeleton from '../components/skeleton/HomeScreenSkeleton'
 import { colors } from '../../lib/theme';
+import { useContentStore } from '../../lib/store/contentStore';
 
 interface Recipe {
   _id: string;
@@ -52,7 +53,7 @@ const RecipeCard = ({ recipe, onPress }: { recipe: Recipe; onPress: () => void }
     className="h-40 w-64 bg-white rounded-2xl mr-4 overflow-hidden shadow-sm"
   >
     <Image
-      source={{ uri: urlFor(recipe.image).width(256).height(120).url() }}
+      source={{ uri: recipe.image ? urlFor(recipe.image).width(256).height(120).url() : 'https://via.placeholder.com/256x120.png?text=No+Image' }}
       className="w-full h-24"
       resizeMode="cover"
     />
@@ -61,7 +62,7 @@ const RecipeCard = ({ recipe, onPress }: { recipe: Recipe; onPress: () => void }
         {recipe.tittel}
       </Text>
       <Text className="text-text-secondary text-body-small">
-        {recipe.totalKcal} kcal
+        {recipe.totalKcal || 0} kcal
       </Text>
     </View>
   </TouchableOpacity>
@@ -106,60 +107,36 @@ export default function HomeScreen() {
   const [inspirationalRecipes, setInspirationalRecipes] = useState<Recipe[]>([]);
   const { width } = useWindowDimensions();
   const router = useRouter();
-
-  const fetchCategories = async () => {
-    try {
-      const query = `*[_type == "kategori"] {
-        _id,
-        name,
-        description,
-        image
-      }`;
-      const data = await client.fetch<Category[]>(query);
-      setCategories(data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
-  const fetchRecipes = async () => {
-    try {
-      const query = `*[_type == "oppskrift"] {
-        _id,
-        tittel,
-        image,
-        kategorier[]->{
-          _id,
-          name
-        },
-        totalKcal
-      }`;
-      const data = await client.fetch<Recipe[]>(query);
-      // Randomly select 4 recipes for inspiration
-      const shuffled = [...data].sort(() => 0.5 - Math.random());
-      setInspirationalRecipes(shuffled.slice(0, 4));
-      setPopularRecipes(data.slice(0, 4)); // First 4 recipes for popular
-      setRecentRecipes(data.slice(-4)); // Last 4 recipes for recent
-    } catch (error) {
-      console.error('Error fetching recipes:', error);
-    }
-  };
+  const { recipes, categories: cachedCategories, isLoading: contentLoading, refreshContent, isCacheStale } = useContentStore();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadContent = async () => {
       setIsLoading(true);
-      try {
-        await Promise.all([fetchCategories(), fetchRecipes()]);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
+      
+      // Check if cache is stale and refresh if needed
+      if (isCacheStale()) {
+        await refreshContent();
       }
+      
+      // Set categories from cache
+      setCategories(cachedCategories || []);
+      
+      // Process recipes for different sections
+      if (recipes && recipes.length > 0) {
+        // Randomly select 4 recipes for inspiration
+        const shuffled = [...recipes].sort(() => 0.5 - Math.random());
+        setInspirationalRecipes(shuffled.slice(0, 4));
+        setPopularRecipes(recipes.slice(0, 4)); // First 4 recipes for popular
+        setRecentRecipes(recipes.slice(-4)); // Last 4 recipes for recent
+      }
+      
+      setIsLoading(false);
     };
-    fetchData();
-  }, []);
+    
+    loadContent();
+  }, [recipes, cachedCategories, isCacheStale, refreshContent]);
 
-  if (isLoading) {
+  if (isLoading || contentLoading) {
     return <HomeScreenSkeleton />;
   }
 

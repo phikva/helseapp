@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { client } from '../../lib/sanity';
 import { kjokkenTyperQuery, type KjokkenType } from '../../lib/queries/brukerprofilQueries';
+import FoodPreferencesSkeleton from './skeleton/FoodPreferencesSkeleton';
+import { useProfileStore } from '../../lib/store/profileStore';
 
 interface FoodPreference {
   id: string;
@@ -14,17 +16,30 @@ interface FoodPreferencesProps {
   profileId: string;
   onChanges: (values: Set<string>) => void;
   setInitialValues: (values: Set<string>) => void;
+  cachedData?: boolean;
 }
 
-export default function FoodPreferences({ profileId, onChanges, setInitialValues }: FoodPreferencesProps) {
+export default function FoodPreferences({ profileId, onChanges, setInitialValues, cachedData = false }: FoodPreferencesProps) {
   const [preferences, setPreferences] = useState<FoodPreference[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<Set<string>>(new Set());
   const [kitchenTypes, setKitchenTypes] = useState<KjokkenType[]>([]);
   const [loading, setLoading] = useState(true);
+  const { foodPreferences } = useProfileStore();
 
   useEffect(() => {
-    fetchPreferences();
     fetchKitchenTypes();
+    
+    if (cachedData && foodPreferences.length > 0) {
+      // Use cached data from the store
+      setPreferences(foodPreferences);
+      const initialValues = new Set(foodPreferences.map(pref => pref.preference_value) || []);
+      setSelectedCuisines(initialValues);
+      setInitialValues(initialValues);
+      setLoading(false);
+    } else {
+      // Fetch from API if no cached data
+      fetchPreferences();
+    }
   }, []);
 
   const fetchKitchenTypes = async () => {
@@ -70,16 +85,12 @@ export default function FoodPreferences({ profileId, onChanges, setInitialValues
   };
 
   if (loading) {
-    return (
-      <View className="mb-6">
-        <Text className="text-text-secondary text-body-medium mb-3">Laster matpreferanser...</Text>
-      </View>
-    );
+    return <FoodPreferencesSkeleton />;
   }
 
   return (
     <View className="mb-20">
-      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">
+      <Text className="font-heading-serif text-display-small text-primary-black mb-2">
         Matpreferanser
       </Text>
       <Text className="text-text-secondary text-body-large mb-6">
@@ -94,7 +105,7 @@ export default function FoodPreferences({ profileId, onChanges, setInitialValues
               key={cuisine._id}
               onPress={() => toggleSelection(cuisine)}
               className={`px-4 py-2 rounded-full ${
-                isSelected ? 'bg-primary-Green' : 'bg-gray-200'
+                isSelected ? 'bg-primary-purple' : 'bg-gray-200'
               }`}
             >
               <Text className={`

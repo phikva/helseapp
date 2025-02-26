@@ -2,6 +2,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { buttonStyles } from '../../lib/theme';
+import PortionSettingsSkeleton from './skeleton/PortionSettingsSkeleton';
+import { useProfileStore } from '../../lib/store/profileStore';
 
 interface PortionSetting {
   id: string;
@@ -12,15 +14,28 @@ interface PortionSettingsProps {
   profileId: string;
   onChanges?: (value: number) => void;
   setInitialValues?: (value: number) => void;
+  cachedData?: boolean;
 }
 
-export default function PortionSettings({ profileId, onChanges, setInitialValues }: PortionSettingsProps) {
+export default function PortionSettings({ profileId, onChanges, setInitialValues, cachedData = false }: PortionSettingsProps) {
   const [portions, setPortions] = useState<PortionSetting | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialValue, setInitialValue] = useState<number | null>(null);
+  const { portionSettings } = useProfileStore();
 
   useEffect(() => {
-    fetchPortions();
+    if (cachedData && portionSettings) {
+      // Use cached data from the store
+      setPortions(portionSettings);
+      setInitialValue(portionSettings.number_of_people);
+      if (setInitialValues) {
+        setInitialValues(portionSettings.number_of_people);
+      }
+      setLoading(false);
+    } else {
+      // Fetch from API if no cached data
+      fetchPortions();
+    }
   }, []);
 
   const fetchPortions = async () => {
@@ -76,9 +91,13 @@ export default function PortionSettings({ profileId, onChanges, setInitialValues
     }
   };
 
+  if (loading) {
+    return <PortionSettingsSkeleton />;
+  }
+
   return (
     <View className="mb-20">
-      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">Antall porsjoner</Text>
+      <Text className="font-heading-serif text-display-small text-primary-black mb-2">Antall porsjoner</Text>
       <Text className="text-text-secondary text-body-large mb-6">
         Hvor mange personer lager du vanligvis mat til?
       </Text>
@@ -91,7 +110,7 @@ export default function PortionSettings({ profileId, onChanges, setInitialValues
               onPress={() => updatePortions(number)}
               className={`w-14 h-14 rounded-full ${
                 portions?.number_of_people === number 
-                  ? 'bg-primary-Green'
+                  ? 'bg-primary-purple'
                   : 'bg-gray-200'
               } justify-center items-center`}
             >

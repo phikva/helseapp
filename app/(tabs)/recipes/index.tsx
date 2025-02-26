@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { client, urlFor } from '@/lib/sanity';
-import { getAllRecipesQuery } from '@/lib/queries/recipeQueries';
+import { urlFor } from '@/lib/sanity';
 import RecipeListSkeleton from '../../components/skeleton/RecipeListSkeleton';
+import RecipeFilters from '../../components/RecipeFilters';
 import { colors } from '../../../lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useContentStore } from '../../../lib/store/contentStore';
 
 interface Recipe {
   _id: string;
@@ -22,29 +24,130 @@ interface Recipe {
   };
 }
 
+interface FilterValues {
+  searchTerm: string;
+  selectedCategories: string[];
+  calories: { min: number; max: number };
+  protein: { min: number; max: number };
+  carbs: { min: number; max: number };
+  fat: { min: number; max: number };
+}
+
 export default function RecipesScreen() {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { recipes, categories, isLoading: contentLoading, error: contentError, refreshContent, isCacheStale } = useContentStore();
+  
+  // Filter state
+  const [filters, setFilters] = useState<FilterValues>({
+    searchTerm: '',
+    selectedCategories: [],
+    calories: { min: 0, max: 2000 },
+    protein: { min: 0, max: 100 },
+    carbs: { min: 0, max: 200 },
+    fat: { min: 0, max: 100 }
+  });
+  
+  // Max values for filters
+  const [maxValues, setMaxValues] = useState({
+    calories: 2000,
+    protein: 100,
+    carbs: 200,
+    fat: 100
+  });
 
   useEffect(() => {
-    fetchRecipes();
-  }, []);
+    const loadRecipes = async () => {
+      setLoading(true);
+      
+      // Check if cache is stale and refresh if needed
+      if (isCacheStale()) {
+        await refreshContent();
+      }
+      
+      // Calculate max values for filters based on actual data
+      if (recipes && recipes.length > 0) {
+        const maxCalories = Math.max(...recipes.map((recipe) => recipe.totalKcal || 0));
+        const maxProtein = Math.max(...recipes.map((recipe) => recipe.totalMakros?.protein || 0));
+        const maxCarbs = Math.max(...recipes.map((recipe) => recipe.totalMakros?.karbs || 0));
+        const maxFat = Math.max(...recipes.map((recipe) => recipe.totalMakros?.fett || 0));
+        
+        const newMaxValues = {
+          calories: Math.ceil(maxCalories / 100) * 100, // Round up to nearest 100
+          protein: Math.ceil(maxProtein / 5) * 5, // Round up to nearest 5
+          carbs: Math.ceil(maxCarbs / 10) * 10, // Round up to nearest 10
+          fat: Math.ceil(maxFat / 5) * 5 // Round up to nearest 5
+        };
+        
+        setMaxValues(newMaxValues);
+        setFilters(prev => ({
+          ...prev,
+          calories: { min: 0, max: newMaxValues.calories },
+          protein: { min: 0, max: newMaxValues.protein },
+          carbs: { min: 0, max: newMaxValues.carbs },
+          fat: { min: 0, max: newMaxValues.fat }
+        }));
+      }
+      
+      setLoading(false);
+    };
+    
+    loadRecipes();
+  }, [recipes, isCacheStale, refreshContent]);
 
-  const fetchRecipes = async () => {
-    try {
-      const data = await client.fetch(getAllRecipesQuery);
-      setRecipes(data);
-      setLoading(false);
-    } catch (err) {
-      setError('Kunne ikke laste inn oppskrifter');
-      setLoading(false);
-      console.error('Error fetching recipes:', err);
-    }
+  const handleFilterChange = (newFilters: FilterValues) => {
+    setFilters(newFilters);
   };
 
-  if (loading) {
+  // Apply filters to recipes
+  const filteredRecipes = useMemo(() => {
+    if (!recipes) return [];
+    
+    return recipes.filter(recipe => {
+      // Filter by search term
+      if (filters.searchTerm && !recipe.tittel.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+        return false;
+      }
+      
+      // Filter by categories
+      if (filters.selectedCategories.length > 0) {
+        const recipeCategories = recipe.kategorier?.map(cat => cat._id) || [];
+        const hasAllSelectedCategories = filters.selectedCategories.every(catId => 
+          recipeCategories.includes(catId)
+        );
+        if (!hasAllSelectedCategories) return false;
+      }
+      
+      // Filter by calories - only if min > 0 or max < maxValue
+      if ((filters.calories.min > 0 && (recipe.totalKcal || 0) < filters.calories.min) || 
+          (recipe.totalKcal || 0) > filters.calories.max) {
+        return false;
+      }
+      
+      // Filter by protein - only if min > 0 or max < maxValue
+      if ((filters.protein.min > 0 && (recipe.totalMakros?.protein || 0) < filters.protein.min) || 
+          (recipe.totalMakros?.protein || 0) > filters.protein.max) {
+        return false;
+      }
+      
+      // Filter by carbs - only if min > 0 or max < maxValue
+      if ((filters.carbs.min > 0 && (recipe.totalMakros?.karbs || 0) < filters.carbs.min) || 
+          (recipe.totalMakros?.karbs || 0) > filters.carbs.max) {
+        return false;
+      }
+      
+      // Filter by fat - only if min > 0 or max < maxValue
+      if ((filters.fat.min > 0 && (recipe.totalMakros?.fett || 0) < filters.fat.min) || 
+          (recipe.totalMakros?.fett || 0) > filters.fat.max) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [recipes, filters]);
+
+  if (loading || contentLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
         <Stack.Screen 
@@ -60,7 +163,7 @@ export default function RecipesScreen() {
     );
   }
 
-  if (error) {
+  if (error || contentError) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48, paddingBottom: 0 }}>
         <Stack.Screen 
@@ -72,9 +175,9 @@ export default function RecipesScreen() {
           }} 
         />
         <View className="flex-1 justify-center items-center p-4">
-          <Text className="text-red-500 text-center">{error}</Text>
+          <Text className="text-red-500 text-center">{error || contentError}</Text>
           <TouchableOpacity 
-            onPress={fetchRecipes}
+            onPress={refreshContent}
             className="mt-4 bg-primary-green px-4 py-2 rounded-lg"
           >
             <Text className="text-white">Prøv igjen</Text>
@@ -91,61 +194,104 @@ export default function RecipesScreen() {
           title: 'Oppskrifter',
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.primary.light },
-          headerTitleStyle: { fontFamily: 'Montaga-Regular' },
+          headerTitleStyle: { fontFamily: 'Montaga-Regular', fontSize: 32 },
         }} 
       />
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-4 pt-4">
-          <Text className="body-regular text-lg text-text-secondary mb-4">Alle oppskrifter</Text>
-          
-          <View className="space-y-4">
-            {recipes.map((recipe) => (
-              <TouchableOpacity
-                key={recipe._id}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden"
-                onPress={() => {
-                  router.push({
-                    pathname: '/recipes/[id]',
-                    params: { id: recipe._id }
-                  });
-                }}
-              >
-                <Image
-                  source={{ uri: urlFor(recipe.image).width(400).height(200).url() }}
-                  className="w-full h-48"
-                  resizeMode="cover"
-                />
-                <View className="p-4">
-                  <Text className="font-heading-serif text-xl mb-2">{recipe.tittel}</Text>
-                  
-                  {/* Categories */}
-                  <View className="flex-row flex-wrap gap-2 mb-2">
-                    {recipe.kategorier.map((kategori) => (
-                      <TouchableOpacity
-                        key={kategori._id}
-                        onPress={() => {
-                          router.push({
-                            pathname: '/categories/[id]',
-                            params: { id: kategori._id }
-                          });
-                        }}
-                        className="bg-primary-green/10 px-2 py-1 rounded-full"
-                      >
-                        <Text className="text-sm text-primary-green">{kategori.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+      
+      <View className="px-4">
+        <RecipeFilters 
+          onFilterChange={handleFilterChange}
+          maxValues={maxValues}
+        />
+      </View>
+      
+      <View className="px-4 mt-2 flex-row justify-between items-center">
+        <Text className="body-regular text-text-secondary">
+          {filteredRecipes?.length || 0} {(filteredRecipes?.length || 0) === 1 ? 'oppskrift' : 'oppskrifter'} funnet
+        </Text>
+        
+        {/* Show reset all button if any filter is active */}
+        {(filters.searchTerm || filters.selectedCategories.length > 0 || 
+          filters.calories.max < maxValues.calories || 
+          filters.protein.max < maxValues.protein || 
+          filters.carbs.max < maxValues.carbs || 
+          filters.fat.max < maxValues.fat) && (
+          <TouchableOpacity 
+            onPress={() => {
+              setFilters({
+                searchTerm: '',
+                selectedCategories: [],
+                calories: { min: 0, max: maxValues.calories },
+                protein: { min: 0, max: maxValues.protein },
+                carbs: { min: 0, max: maxValues.carbs },
+                fat: { min: 0, max: maxValues.fat }
+              });
+            }}
+            className="bg-gray-200 rounded-lg px-3 py-1"
+          >
+            <Text className="text-text-secondary">Nullstill alle</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      <ScrollView className="flex-1 mt-2" showsVerticalScrollIndicator={false}>
+        <View className="px-4 pt-2">
+          {!filteredRecipes || filteredRecipes.length === 0 ? (
+            <View className="items-center justify-center py-10">
+              <Ionicons name="search-outline" size={48} color={colors.text.secondary} />
+              <Text className="text-text-secondary text-center mt-4 text-lg">Ingen oppskrifter funnet</Text>
+              <Text className="text-text-secondary text-center mt-1">Prøv å justere filtrene dine</Text>
+            </View>
+          ) : (
+            <View className="space-y-4">
+              {filteredRecipes.map((recipe) => (
+                <TouchableOpacity
+                  key={recipe._id}
+                  className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                  onPress={() => {
+                    router.push({
+                      pathname: '/recipes/[id]',
+                      params: { id: recipe._id }
+                    });
+                  }}
+                >
+                  <Image
+                    source={{ uri: recipe.image ? urlFor(recipe.image).width(400).height(200).url() : 'https://via.placeholder.com/400x200.png?text=No+Image' }}
+                    className="w-full h-48"
+                    resizeMode="cover"
+                  />
+                  <View className="p-4">
+                    <Text className="font-heading-serif text-xl mb-2">{recipe.tittel}</Text>
+                    
+                    {/* Categories */}
+                    <View className="flex-row flex-wrap gap-2 mb-2">
+                      {(recipe.kategorier || []).map((kategori) => (
+                        <TouchableOpacity
+                          key={kategori._id}
+                          onPress={() => {
+                            router.push({
+                              pathname: '/categories/[id]',
+                              params: { id: kategori._id }
+                            });
+                          }}
+                          className="bg-primary-green/10 px-2 py-1 rounded-full"
+                        >
+                          <Text className="text-sm text-primary-green">{kategori.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
 
-                  <Text className="text-text-secondary">Kalorier: {recipe.totalKcal} kcal</Text>
-                  <View className="flex-row justify-between mt-2">
-                    <Text className="text-text-secondary">Protein: {recipe.totalMakros.protein}g</Text>
-                    <Text className="text-text-secondary">Karbohydrater: {recipe.totalMakros.karbs}g</Text>
-                    <Text className="text-text-secondary">Fett: {recipe.totalMakros.fett}g</Text>
+                    <Text className="text-text-secondary">Kalorier: {recipe.totalKcal || 0} kcal</Text>
+                    <View className="flex-row justify-between mt-2">
+                      <Text className="text-text-secondary">Protein: {recipe.totalMakros?.protein || 0}g</Text>
+                      <Text className="text-text-secondary">Karbohydrater: {recipe.totalMakros?.karbs || 0}g</Text>
+                      <Text className="text-text-secondary">Fett: {recipe.totalMakros?.fett || 0}g</Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

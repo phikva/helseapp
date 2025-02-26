@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { client } from '../../lib/sanity';
 import { allergierQuery, type AllergiItem } from '../../lib/queries/brukerprofilQueries';
+import AllergiesSkeleton from './skeleton/AllergiesSkeleton';
+import { useProfileStore } from '../../lib/store/profileStore';
 
 interface Allergy {
   id: string;
@@ -14,17 +16,30 @@ interface AllergiesProps {
   profileId: string;
   onChanges: (values: Set<string>) => void;
   setInitialValues: (values: Set<string>) => void;
+  cachedData?: boolean;
 }
 
-export default function Allergies({ profileId, onChanges, setInitialValues }: AllergiesProps) {
+export default function Allergies({ profileId, onChanges, setInitialValues, cachedData = false }: AllergiesProps) {
   const [allergies, setAllergies] = useState<Allergy[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<Set<string>>(new Set());
   const [commonAllergies, setCommonAllergies] = useState<AllergiItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { allergies: cachedAllergies } = useProfileStore();
 
   useEffect(() => {
-    fetchAllergies();
     fetchCommonAllergies();
+    
+    if (cachedData && cachedAllergies.length > 0) {
+      // Use cached data from the store
+      setAllergies(cachedAllergies);
+      const initialValues = new Set(cachedAllergies.map(allergy => allergy.allergy_name) || []);
+      setSelectedAllergies(initialValues);
+      setInitialValues(initialValues);
+      setLoading(false);
+    } else {
+      // Fetch from API if no cached data
+      fetchAllergies();
+    }
   }, []);
 
   const fetchCommonAllergies = async () => {
@@ -69,16 +84,12 @@ export default function Allergies({ profileId, onChanges, setInitialValues }: Al
   };
 
   if (loading) {
-    return (
-      <View className="mb-6">
-        <Text className="text-text-secondary text-body-medium mb-3">Laster allergier...</Text>
-      </View>
-    );
+    return <AllergiesSkeleton />;
   }
 
   return (
     <View className="mb-20">
-      <Text className="font-heading-serif text-display-small text-primary-Black mb-2">Allergier</Text>
+      <Text className="font-heading-serif text-display-small text-primary-black mb-2">Allergier</Text>
       <Text className="text-text-secondary text-body-large mb-6">Velg dine allergier</Text>
       
       <View className="flex-row flex-wrap gap-2">
@@ -89,7 +100,7 @@ export default function Allergies({ profileId, onChanges, setInitialValues }: Al
               key={allergy.navn}
               onPress={() => toggleSelection(allergy.navn)}
               className={`px-4 py-2 rounded-full ${
-                isSelected ? 'bg-primary-Green' : 'bg-gray-200'
+                isSelected ? 'bg-primary-purple' : 'bg-gray-200'
               }`}
             >
               <Text className={`${

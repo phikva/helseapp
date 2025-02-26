@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView, Dimensions, Switch } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../lib/store/authStore';
@@ -16,7 +16,13 @@ import { Svg, Path } from 'react-native-svg';
 import EditProfileForm from '../components/EditProfileForm';
 import { useToast } from '../components/ui/Toast';
 import ProfileSkeleton from '../components/skeleton/ProfileSkeleton';
+import DietaryRequirementsSkeleton from '../components/skeleton/DietaryRequirementsSkeleton';
+import AllergiesSkeleton from '../components/skeleton/AllergiesSkeleton';
+import FoodPreferencesSkeleton from '../components/skeleton/FoodPreferencesSkeleton';
+import BudgetSettingsSkeleton from '../components/skeleton/BudgetSettingsSkeleton';
+import PortionSettingsSkeleton from '../components/skeleton/PortionSettingsSkeleton';
 import { TopHeader } from '../../components/ui/TopHeader';
+import { useProfileStore } from '../../lib/store/profileStore';
 
 const { width } = Dimensions.get('window');
 
@@ -72,10 +78,13 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { session, signOut } = useAuthStore();
   const { showToast } = useToast();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { profile, loading: profileLoading, refreshProfile, isStale } = useProfileStore();
   const [showEditForm, setShowEditForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState({
+    notifications: false,
+    darkMode: false
+  });
   const [preferenceChanges, setPreferenceChanges] = useState<PreferenceChanges>({
     dietary: new Set(),
     allergies: new Set(),
@@ -93,30 +102,25 @@ export default function ProfileScreen() {
     { key: 'profile', title: 'Profil' },
     { key: 'subscription', title: 'Abonnement' },
     { key: 'preferences', title: 'Preferanser' },
+    { key: 'settings', title: 'Innstillinger' },
   ];
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
-    try {
-      if (!session?.user) return;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
+    // If profile data is stale, refresh it
+    if (session?.user && isStale()) {
+      refreshProfile();
     }
-  };
+  }, [session, isStale]);
+
+  // Add effect to refresh data when switching to preferences tab
+  useEffect(() => {
+    if (activeTab === 'preferences' && session?.user) {
+      // Check if data is stale before refreshing
+      if (isStale()) {
+        refreshProfile();
+      }
+    }
+  }, [activeTab, isStale, session]);
 
   const handleEditProfile = () => {
     setShowEditForm(true);
@@ -287,140 +291,442 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleSettingChange = (setting: string, value: boolean) => {
+    setSettings(prev => ({
+      ...prev,
+      [setting]: value
+    }));
+  };
+
+  const handleSaveSettings = () => {
+    showToast({
+      type: 'success',
+      title: 'Lagret',
+      message: 'Innstillingene har blitt oppdatert'
+    });
+  };
+
   // Tab content components
-  const renderProfileTab = () => (
-    <ScrollView className="flex-1 px-5">
-      {profile ? (
-        <>
-          <View className="bg-white rounded-2xl p-6 mb-4 shadow-sm">
+  const renderProfileTab = () => {
+    if (profileLoading) {
+      return (
+        <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+          <View className="bg-primary-light rounded-2xl p-6 mb-4 shadow-sm">
+            {/* Profile Header */}
             <View className="flex-row items-center mb-6">
-              <View className="w-16 h-16 bg-primary-Green/10 rounded-full items-center justify-center mb-2">
-                <IconSymbol name="person.fill" size={32} color="#16A34A" />
-              </View>
+              <View className="w-16 h-16 bg-gray-200 rounded-full" />
               <View className="ml-4">
-                <Text className="text-primary-Black text-xl font-bold">{profile.full_name}</Text>
-                <Text className="text-text-secondary">Sist oppdatert: {new Date(profile.updated_at).toLocaleDateString('no-NO')}</Text>
+                <View className="h-7 w-40 bg-gray-200 rounded mb-2" />
+                <View className="h-5 w-48 bg-gray-200 rounded" />
               </View>
             </View>
 
-            {/* Improved stats section with better UI */}
-            <View className="bg-gray-50 p-4 rounded-xl mb-4">
-              <Text className="text-primary-Black text-lg font-semibold mb-3">Personlige data</Text>
+            {/* Stats Grid */}
+            <View className="bg-primary-light p-4 rounded-xl mb-4">
+              <View className="h-6 w-40 bg-gray-200 rounded mb-3" />
               <View className="space-y-3">
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center">
-                    <WeightIcon size={24} />
-                    <Text className="text-text-secondary text-body-medium ml-2">Vekt</Text>
+                    <View className="w-6 h-6 bg-gray-200 rounded-full" />
+                    <View className="h-5 w-16 bg-gray-200 rounded ml-2" />
                   </View>
-                  <Text className="text-primary-Black text-xl font-semibold">{profile.weight} kg</Text>
+                  <View className="h-7 w-20 bg-gray-200 rounded" />
                 </View>
                 
                 <View className="h-[1px] bg-gray-200" />
                 
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center">
-                    <HeightIcon size={24} />
-                    <Text className="text-text-secondary text-body-medium ml-2">Høyde</Text>
+                    <View className="w-6 h-6 bg-gray-200 rounded-full" />
+                    <View className="h-5 w-16 bg-gray-200 rounded ml-2" />
                   </View>
-                  <Text className="text-primary-Black text-xl font-semibold">{profile.height} cm</Text>
+                  <View className="h-7 w-20 bg-gray-200 rounded" />
                 </View>
                 
                 <View className="h-[1px] bg-gray-200" />
                 
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center">
-                    <IconSymbol name="chevron.right" size={24} color="#16A34A" />
-                    <Text className="text-text-secondary text-body-medium ml-2">Alder</Text>
+                    <View className="w-6 h-6 bg-gray-200 rounded-full" />
+                    <View className="h-5 w-16 bg-gray-200 rounded ml-2" />
                   </View>
-                  <Text className="text-primary-Black text-xl font-semibold">{profile.age} år</Text>
+                  <View className="h-7 w-20 bg-gray-200 rounded" />
                 </View>
               </View>
             </View>
           </View>
 
-          <Button
-            onPress={handleEditProfile}
-            className="mb-6"
-          >
-            Rediger Profil
-          </Button>
+          <View className="h-14 bg-gray-200 rounded-full mb-6" />
+        </ScrollView>
+      );
+    }
 
-          {/* Edit Profile Form Modal */}
-          {profile && (
-            <EditProfileForm
-              profile={profile}
-              visible={showEditForm}
-              onClose={() => setShowEditForm(false)}
-              onSave={fetchProfile}
+    return (
+      <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+        {profile ? (
+          <>
+            <View className="bg-primary-light rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+              {/* Enhanced Profile Header */}
+              <View className="items-center mb-6">
+                <View className="w-24 h-24 bg-primary-green/10 rounded-full items-center justify-center mb-4">
+                  <IconSymbol name="person.fill" size={40} color="#4A6C62" />
+                </View>
+                <Text className="text-primary-black text-2xl font-bold text-center">{profile.full_name}</Text>
+                <Text className="text-text-secondary text-center mt-1">Sist oppdatert: {new Date(profile.updated_at).toLocaleDateString('no-NO')}</Text>
+              </View>
+
+              {/* Improved stats section with better UI */}
+              <View className="bg-primary-light p-5 rounded-xl mb-4 border border-gray-100">
+                <Text className="text-primary-green text-xl font-semibold mb-4">Personlige data</Text>
+                <View className="space-y-4">
+                  <View className="flex-row items-center">
+                    <View className="w-10 h-10 bg-primary-green/10 rounded-full items-center justify-center">
+                      <WeightIcon size={20} color="#4A6C62" />
+                    </View>
+                    <View className="ml-4 flex-1">
+                      <Text className="text-text-secondary text-body-medium">Vekt</Text>
+                      <Text className="text-primary-green text-xl font-semibold">{profile.weight} kg</Text>
+                    </View>
+                  </View>
+                  
+                  <View className="h-[1px] bg-primary-green/10" />
+                  
+                  <View className="flex-row items-center">
+                    <View className="w-10 h-10 bg-primary-green/10 rounded-full items-center justify-center">
+                      <HeightIcon size={20} color="#4A6C62" />
+                    </View>
+                    <View className="ml-4 flex-1">
+                      <Text className="text-text-secondary text-body-medium">Høyde</Text>
+                      <Text className="text-primary-green text-xl font-semibold">{profile.height} cm</Text>
+                    </View>
+                  </View>
+                  
+                  <View className="h-[1px] bg-primary-green/10" />
+                  
+                  <View className="flex-row items-center">
+                    <View className="w-10 h-10 bg-primary-green/10 rounded-full items-center justify-center">
+                      <IconSymbol name="person.fill" size={20} color="#4A6C62" />
+                    </View>
+                    <View className="ml-4 flex-1">
+                      <Text className="text-text-secondary text-body-medium">Alder</Text>
+                      <Text className="text-primary-green text-xl font-semibold">{profile.age} år</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <Button
+              onPress={handleEditProfile}
+              className="mb-8 bg-primary-green"
+            >
+              Rediger Profil
+            </Button>
+
+            {/* Edit Profile Form Modal */}
+            {profile && (
+              <EditProfileForm
+                profile={profile}
+                visible={showEditForm}
+                onClose={() => setShowEditForm(false)}
+                onSave={refreshProfile}
+              />
+            )}
+          </>
+        ) : (
+          <View className="bg-primary-light rounded-2xl p-6 mb-6 border border-gray-100">
+            <Text className="text-text-secondary text-body-large">
+              Ingen profildata funnet
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
+
+  const renderSubscriptionTab = () => {
+    if (profileLoading) {
+      return (
+        <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+          <View className="bg-primary-light rounded-2xl p-6 mb-4 shadow-sm border border-gray-100">
+            <View className="h-7 w-40 bg-gray-200 rounded mb-4" />
+            <View className="h-5 w-64 bg-gray-200 rounded mb-6" />
+            
+            {/* Subscription Plans */}
+            <View className="space-y-4 mb-6">
+              {[1, 2, 3].map((item) => (
+                <View key={item} className="border border-gray-200 rounded-xl p-4 bg-primary-light">
+                  <View className="flex-row justify-between items-center mb-3">
+                    <View className="h-6 w-24 bg-gray-200 rounded" />
+                    <View className="h-8 w-20 bg-gray-200 rounded-full" />
+                  </View>
+                  <View className="h-4 w-full bg-gray-200 rounded mb-2" />
+                  <View className="h-4 w-3/4 bg-gray-200 rounded mb-4" />
+                  <View className="space-y-2">
+                    {[1, 2, 3].map((feature) => (
+                      <View key={feature} className="flex-row items-center">
+                        <View className="w-5 h-5 bg-gray-200 rounded-full mr-2" />
+                        <View className="h-4 w-56 bg-gray-200 rounded" />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
+            
+            <View className="h-14 bg-gray-200 rounded-full" />
+          </View>
+        </ScrollView>
+      );
+    }
+    
+    return (
+      <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+        {session?.user && (
+          <SubscriptionManager 
+            profileId={session.user.id} 
+          />
+        )}
+      </ScrollView>
+    );
+  };
+
+  const renderPreferencesTab = () => {
+    if (profileLoading) {
+      return (
+        <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+          <DietaryRequirementsSkeleton />
+          <AllergiesSkeleton />
+          <FoodPreferencesSkeleton />
+          <BudgetSettingsSkeleton />
+          <PortionSettingsSkeleton />
+        </ScrollView>
+      );
+    }
+    
+    return (
+      <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+        {session?.user && (
+          <>
+            <DietaryRequirements 
+              profileId={session.user.id} 
+              onChanges={(values) => handlePreferenceChange('dietary', values)}
+              setInitialValues={(values) => {
+                setOriginalPreferences(prev => ({...prev, dietary: values}));
+                setPreferenceChanges(prev => ({...prev, dietary: values}));
+              }}
+              cachedData={true}
             />
-          )}
-        </>
-      ) : (
-        <View className="bg-white rounded-2xl p-6 mb-6">
-          <Text className="text-text-secondary text-body-large">
-            Ingen profildata funnet
-          </Text>
+            <Allergies 
+              profileId={session.user.id}
+              onChanges={(values) => handlePreferenceChange('allergies', values)}
+              setInitialValues={(values) => {
+                setOriginalPreferences(prev => ({...prev, allergies: values}));
+                setPreferenceChanges(prev => ({...prev, allergies: values}));
+              }}
+              cachedData={true}
+            />
+            <FoodPreferences 
+              profileId={session.user.id}
+              onChanges={(values) => handlePreferenceChange('cuisines', values)}
+              setInitialValues={(values) => {
+                setOriginalPreferences(prev => ({...prev, cuisines: values}));
+                setPreferenceChanges(prev => ({...prev, cuisines: values}));
+              }}
+              cachedData={true}
+            />
+            <BudgetSettings 
+              profileId={session.user.id}
+              onChanges={(values) => handlePreferenceChange('budget', values)}
+              setInitialValues={(values) => {
+                setOriginalPreferences(prev => ({...prev, budget: values}));
+                setPreferenceChanges(prev => ({...prev, budget: values}));
+              }}
+              cachedData={true}
+            />
+            <PortionSettings 
+              profileId={session.user.id} 
+              onChanges={(value) => handlePreferenceChange('portions', value)}
+              setInitialValues={(value) => {
+                setOriginalPreferences(prev => ({...prev, portions: value}));
+                setPreferenceChanges(prev => ({...prev, portions: value}));
+              }}
+              cachedData={true}
+            />
+          </>
+        )}
+      </ScrollView>
+    );
+  };
+
+  const renderSettingsTab = () => {
+    if (profileLoading) {
+      return (
+        <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+          <View className="bg-primary-light rounded-2xl p-6 mb-4 shadow-sm border border-gray-100">
+            <View className="h-7 w-40 bg-gray-200 rounded mb-4" />
+            
+            <View className="space-y-4">
+              {[1, 2, 3, 4].map((item) => (
+                <View key={item} className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <View className="w-8 h-8 bg-gray-200 rounded-full" />
+                    <View className="ml-3">
+                      <View className="h-5 w-32 bg-gray-200 rounded mb-1" />
+                      <View className="h-4 w-48 bg-gray-200 rounded" />
+                    </View>
+                  </View>
+                  <View className="w-12 h-6 bg-gray-200 rounded-full" />
+                </View>
+              ))}
+            </View>
+          </View>
+          
+          <View className="bg-primary-light rounded-2xl p-6 mb-4 shadow-sm border border-gray-100">
+            <View className="h-7 w-40 bg-gray-200 rounded mb-4" />
+            <View className="space-y-4">
+              {[1, 2].map((item) => (
+                <View key={item} className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <View className="w-8 h-8 bg-gray-200 rounded-full" />
+                    <View className="ml-3">
+                      <View className="h-5 w-32 bg-gray-200 rounded mb-1" />
+                      <View className="h-4 w-48 bg-gray-200 rounded" />
+                    </View>
+                  </View>
+                  <View className="w-12 h-6 bg-gray-200 rounded-full" />
+                </View>
+              ))}
+            </View>
+          </View>
+          
+          <View className="h-14 bg-gray-200 rounded-full mb-6" />
+        </ScrollView>
+      );
+    }
+    
+    return (
+      <ScrollView className="flex-1 px-5 pt-4 bg-primary-light">
+        <View className="bg-primary-light rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+          <Text className="text-primary-green text-xl font-bold mb-6">Appinnstillinger</Text>
+          
+          <View className="space-y-6">
+            <TouchableOpacity className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 bg-primary-green/10 rounded-full items-center justify-center">
+                  <IconSymbol name="bell.fill" size={20} color="#4A6C62" />
+                </View>
+                <View className="ml-4 flex-1">
+                  <Text className="text-primary-black text-body-large font-medium">Påminnelser</Text>
+                  <Text className="text-text-secondary text-body-small mt-1">Få påminnelser om måltider</Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.notifications}
+                onValueChange={(value) => handleSettingChange('notifications', value)}
+                trackColor={{ false: '#E5E7EB', true: '#4A6C62' }}
+                thumbColor="#FFFFFF"
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 bg-primary-green/10 rounded-full items-center justify-center">
+                  <IconSymbol name="moon.fill" size={20} color="#4A6C62" />
+                </View>
+                <View className="ml-4 flex-1">
+                  <Text className="text-primary-black text-body-large font-medium">Mørk modus</Text>
+                  <Text className="text-text-secondary text-body-small mt-1">Bytt til mørkt tema</Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.darkMode}
+                onValueChange={(value) => handleSettingChange('darkMode', value)}
+                trackColor={{ false: '#E5E7EB', true: '#4A6C62' }}
+                thumbColor="#FFFFFF"
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 bg-primary-green/10 rounded-full items-center justify-center">
+                  <IconSymbol name="hand.raised.fill" size={20} color="#4A6C62" />
+                </View>
+                <View className="ml-4 flex-1">
+                  <Text className="text-primary-black text-body-large font-medium">Personvern</Text>
+                  <Text className="text-text-secondary text-body-small mt-1">Administrer personverninnstillinger</Text>
+                </View>
+              </View>
+              <View className="bg-primary-light rounded-full p-2 border border-gray-100">
+                <IconSymbol name="chevron.right" size={20} color="#4A6C62" />
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 bg-primary-green/10 rounded-full items-center justify-center">
+                  <IconSymbol name="questionmark.circle.fill" size={20} color="#4A6C62" />
+                </View>
+                <View className="ml-4 flex-1">
+                  <Text className="text-primary-black text-body-large font-medium">Hjelp & støtte</Text>
+                  <Text className="text-text-secondary text-body-small mt-1">Få hjelp med appen</Text>
+                </View>
+              </View>
+              <View className="bg-primary-light rounded-full p-2 border border-gray-100">
+                <IconSymbol name="chevron.right" size={20} color="#4A6C62" />
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-      )}
-    </ScrollView>
-  );
-
-  const renderSubscriptionTab = () => (
-    <ScrollView className="flex-1 px-5">
-      {session?.user && (
-        <SubscriptionManager profileId={session.user.id} />
-      )}
-    </ScrollView>
-  );
-
-  const renderPreferencesTab = () => (
-    <ScrollView className="flex-1 px-5">
-      {session?.user && (
-        <>
-          <DietaryRequirements 
-            profileId={session.user.id} 
-            onChanges={(values) => handlePreferenceChange('dietary', values)}
-            setInitialValues={(values) => {
-              setOriginalPreferences(prev => ({...prev, dietary: values}));
-              setPreferenceChanges(prev => ({...prev, dietary: values}));
-            }}
-          />
-          <Allergies 
-            profileId={session.user.id}
-            onChanges={(values) => handlePreferenceChange('allergies', values)}
-            setInitialValues={(values) => {
-              setOriginalPreferences(prev => ({...prev, allergies: values}));
-              setPreferenceChanges(prev => ({...prev, allergies: values}));
-            }}
-          />
-          <FoodPreferences 
-            profileId={session.user.id}
-            onChanges={(values) => handlePreferenceChange('cuisines', values)}
-            setInitialValues={(values) => {
-              setOriginalPreferences(prev => ({...prev, cuisines: values}));
-              setPreferenceChanges(prev => ({...prev, cuisines: values}));
-            }}
-          />
-          <BudgetSettings 
-            profileId={session.user.id}
-            onChanges={(values) => handlePreferenceChange('budget', values)}
-            setInitialValues={(values) => {
-              setOriginalPreferences(prev => ({...prev, budget: values}));
-              setPreferenceChanges(prev => ({...prev, budget: values}));
-            }}
-          />
-          <PortionSettings 
-            profileId={session.user.id} 
-            onChanges={(value) => handlePreferenceChange('portions', value)}
-            setInitialValues={(value) => {
-              setOriginalPreferences(prev => ({...prev, portions: value}));
-              setPreferenceChanges(prev => ({...prev, portions: value}));
-            }}
-          />
-        </>
-      )}
-    </ScrollView>
-  );
+        
+        <View className="bg-primary-light rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+          <Text className="text-primary-green text-xl font-bold mb-6">Konto</Text>
+          
+          <View className="space-y-6">
+            <TouchableOpacity className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 bg-red-100 rounded-full items-center justify-center">
+                  <IconSymbol name="trash.fill" size={20} color="#EF4444" />
+                </View>
+                <View className="ml-4 flex-1">
+                  <Text className="text-red-500 text-body-large font-medium">Slett konto</Text>
+                  <Text className="text-text-secondary text-body-small mt-1">Slett all data permanent</Text>
+                </View>
+              </View>
+              <View className="bg-red-50 rounded-full p-2">
+                <IconSymbol name="chevron.right" size={20} color="#EF4444" />
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              className="flex-row items-center justify-between"
+              onPress={handleSignOut}
+            >
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 bg-primary-green/10 rounded-full items-center justify-center">
+                  <IconSymbol name="arrow.right.square.fill" size={20} color="#4A6C62" />
+                </View>
+                <View className="ml-4 flex-1">
+                  <Text className="text-primary-black text-body-large font-medium">Logg ut</Text>
+                  <Text className="text-text-secondary text-body-small mt-1">Logg ut av kontoen din</Text>
+                </View>
+              </View>
+              <View className="bg-primary-light rounded-full p-2 border border-gray-100">
+                <IconSymbol name="chevron.right" size={20} color="#4A6C62" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        <Button
+          onPress={handleSaveSettings}
+          className="mb-8 bg-primary-green"
+        >
+          Lagre innstillinger
+        </Button>
+      </ScrollView>
+    );
+  };
 
   // Render the active tab content
   const renderTabContent = () => {
@@ -431,6 +737,8 @@ export default function ProfileScreen() {
         return renderSubscriptionTab();
       case 'preferences':
         return renderPreferencesTab();
+      case 'settings':
+        return renderSettingsTab();
       default:
         return renderProfileTab();
     }
@@ -439,33 +747,59 @@ export default function ProfileScreen() {
   // Custom tab bar
   const renderTabBar = () => (
     <View className="flex-row bg-white border-b border-gray-200">
-      {tabs.map(tab => (
-        <TouchableOpacity
-          key={tab.key}
-          className="flex-1 py-3 items-center"
-          onPress={() => setActiveTab(tab.key)}
-          activeOpacity={0.7}
-        >
-          <Text 
-            className={`font-medium text-base ${
-              activeTab === tab.key 
-                ? 'text-primary-Green font-bold' 
-                : 'text-gray-500'
-            }`}
+      {tabs.map((tab, index) => {
+        // Assign different colors to each tab
+        let activeColor;
+        switch (index) {
+          case 0: // Profile tab
+            activeColor = 'text-primary-green';
+            break;
+          case 1: // Subscription tab
+            activeColor = 'text-primary-cyan';
+            break;
+          case 2: // Preferences tab
+            activeColor = 'text-primary-purple';
+            break;
+          case 3: // Settings tab
+            activeColor = 'text-primary-green';
+            break;
+          default:
+            activeColor = 'text-primary-green';
+        }
+        
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            className="flex-1 py-3 items-center"
+            onPress={() => setActiveTab(tab.key)}
+            activeOpacity={0.7}
           >
-            {tab.title}
-          </Text>
-          {activeTab === tab.key && (
-            <View className="absolute bottom-0 left-6 right-6 h-1 bg-primary-Green rounded-t-full" />
-          )}
-        </TouchableOpacity>
-      ))}
+            <Text 
+              className={`font-medium text-base ${
+                activeTab === tab.key 
+                  ? activeColor + ' font-bold' 
+                  : 'text-gray-500'
+              }`}
+            >
+              {tab.title}
+            </Text>
+            {activeTab === tab.key && (
+              <View className={`absolute bottom-0 left-6 right-6 h-1 ${
+                index === 0 ? 'bg-primary-green' :
+                index === 1 ? 'bg-primary-cyan' :
+                index === 2 ? 'bg-primary-purple' :
+                'bg-primary-green'
+              } rounded-t-full`} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 
-  if (loading) {
+  if (profileLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background pt-12">
+      <SafeAreaView className="flex-1 bg-primary-light pt-12">
         <TopHeader />
         <ProfileSkeleton />
       </SafeAreaView>
@@ -473,16 +807,16 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background pt-12">
+    <SafeAreaView className="flex-1 bg-primary-light pt-12">
       <TopHeader />
       <View className="px-5 py-4">
-        <Text className="font-heading-serif text-display-small text-primary-Black mb-4">
+        <Text className="font-heading-serif text-display-small text-primary-black mb-2">
           Min Profil
         </Text>
       </View>
       
       {renderTabBar()}
-      <View className="flex-1">
+      <View className="flex-1 bg-primary-light">
         {renderTabContent()}
       </View>
       
@@ -492,7 +826,7 @@ export default function ProfileScreen() {
             onPress={saveAllChanges}
             disabled={saving}
             variant="secondary"
-            className="w-full mb-4"
+            className="w-full mb-4 bg-primary-purple"
           >
             {saving ? 'Lagrer...' : 'Lagre alle endringer'}
           </Button>
@@ -500,7 +834,17 @@ export default function ProfileScreen() {
         <Button
           onPress={handleSignOut}
           variant="outline"
-          className="w-full"
+          className={`w-full border-${
+            activeTab === 'profile' ? 'primary-green' : 
+            activeTab === 'subscription' ? 'primary-cyan' : 
+            activeTab === 'preferences' ? 'primary-purple' : 
+            'primary-green'
+          } text-${
+            activeTab === 'profile' ? 'primary-green' : 
+            activeTab === 'subscription' ? 'primary-cyan' : 
+            activeTab === 'preferences' ? 'primary-purple' : 
+            'primary-green'
+          }`}
         >
           Logg ut
         </Button>
