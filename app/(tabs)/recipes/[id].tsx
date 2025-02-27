@@ -41,12 +41,15 @@ interface Recipe {
 }
 
 export default function RecipeScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, color } = useLocalSearchParams();
   const router = useRouter();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
+  // Get the color based on the color parameter
+  const accentColor = color ? colors.primary[color as keyof typeof colors.primary] : colors.primary.green;
+  
   useEffect(() => {
     fetchRecipe();
   }, [id]);
@@ -112,7 +115,10 @@ export default function RecipeScreen() {
           title: recipe.tittel,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.primary.light },
-          headerTitleStyle: { fontFamily: 'Montaga-Regular' },
+          headerTitleStyle: { 
+            fontFamily: 'Montaga-Regular',
+            color: accentColor
+          },
           headerLeft: () => <BackButton onPress={() => router.back()} />,
         }} 
       />
@@ -124,7 +130,7 @@ export default function RecipeScreen() {
           resizeMode="cover"
         />
         <View className="p-4">
-          <Text className="text-4xl font-heading-serif mb-4">{recipe.tittel}</Text>
+          <Text style={{ color: accentColor }} className="text-4xl font-heading-serif mb-4">{recipe.tittel}</Text>
           
           {/* Categories */}
           <View className="flex-row flex-wrap gap-2 mb-4">
@@ -137,16 +143,17 @@ export default function RecipeScreen() {
                     params: { id: kategori._id }
                   });
                 }}
-                className="bg-primary-green/10 px-3 py-1 rounded-full"
+                style={{ backgroundColor: `${accentColor}20` }}
+                className="px-3 py-1 rounded-full"
               >
-                <Text className="text-primary-green">{kategori.name}</Text>
+                <Text style={{ color: accentColor }}>{kategori.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Nutritional Info */}
           <View className="bg-white p-4 rounded-2xl mb-6 shadow-sm">
-            <Text className="text-xl font-heading-serif mb-2">Næringsinnhold</Text>
+            <Text style={{ color: accentColor }} className="text-xl font-heading-serif mb-2">Næringsinnhold</Text>
             <Text className="text-text-secondary mb-2">Totalt kalorier: {recipe.totalKcal} kcal</Text>
             <View className="flex-row justify-between">
               <Text className="text-text-secondary">Protein: {recipe.totalMakros.protein}g</Text>
@@ -157,7 +164,7 @@ export default function RecipeScreen() {
 
           {/* Ingredients */}
           <View className="mb-6">
-            <Text className="text-xl font-heading-serif mb-3">Ingredienser</Text>
+            <Text style={{ color: accentColor }} className="text-xl font-heading-serif mb-3">Ingredienser</Text>
             <View className="bg-white rounded-2xl shadow-sm p-4">
               {recipe.ingrediens.map((ingredient, index) => (
                 <View key={index} className="flex-row justify-between items-center py-2 border-b border-gray-100">
@@ -179,11 +186,11 @@ export default function RecipeScreen() {
 
           {/* Instructions */}
           <View className="mb-6">
-            <Text className="text-xl font-heading-serif mb-3">Fremgangsmåte</Text>
+            <Text style={{ color: accentColor }} className="text-xl font-heading-serif mb-3">Fremgangsmåte</Text>
             <View className="bg-white rounded-2xl shadow-sm p-4">
               {recipe.instruksjoner.map((instruction, index) => (
                 <View key={index} className="flex-row mb-3">
-                  <Text className="text-primary-green font-bold mr-2">{index + 1}.</Text>
+                  <Text style={{ color: accentColor }} className="font-bold mr-2">{index + 1}.</Text>
                   <Text className="flex-1">{instruction}</Text>
                 </View>
               ))}
@@ -193,7 +200,7 @@ export default function RecipeScreen() {
           {/* Notes */}
           {recipe.notater && (
             <View className="mb-6">
-              <Text className="text-xl font-heading-serif mb-2">Notater</Text>
+              <Text style={{ color: accentColor }} className="text-xl font-heading-serif mb-2">Notater</Text>
               <View className="bg-white rounded-2xl shadow-sm p-4">
                 <Text className="text-text-secondary">{recipe.notater}</Text>
               </View>

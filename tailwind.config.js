@@ -13,7 +13,8 @@ module.exports = {
           cyan: '#055976',     // Cyan color for accents
           light: '#FCFCEC',
           purple: '#752167',
-
+          pink: '#B5548C',     // Lighter purple/pink that complements the existing purple
+          blue: '#0A3A5A',     // Deeper blue that complements the existing cyan
         },
         text: {
           DEFAULT: '#000000',

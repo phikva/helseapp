@@ -28,6 +28,10 @@ export const getCategoryWithRecipesQuery = groq`
       _id,
       tittel,
       "image": image.asset->url,
+      "kategorier": kategorier[]-> {
+        _id,
+        name
+      },
       totalKcal,
       totalMakros
     }

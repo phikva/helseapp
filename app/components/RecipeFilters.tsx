@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Animated, Dimensions, StyleSheet, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
@@ -33,12 +33,13 @@ interface RecipeFiltersProps {
     carbs: number;
     fat: number;
   };
+  hideCategoryFilter?: boolean;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DRAWER_HEIGHT = SCREEN_HEIGHT * 0.8;
 
-export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFiltersProps) {
+const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilter = false }: RecipeFiltersProps, ref) => {
   const [drawerAnim] = useState(new Animated.Value(DRAWER_HEIGHT));
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const { categories } = useContentStore();
@@ -55,10 +56,6 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
   // Category dropdown state
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   
-  // Filter section collapse/expand state
-  const [isFilterSectionExpanded, setIsFilterSectionExpanded] = useState(true);
-  const [filterSectionHeight] = useState(new Animated.Value(1));
-
   // Pan responder for draggable drawer
   const panResponder = useRef(
     PanResponder.create({
@@ -96,6 +93,28 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
       fat: { min: 0, max: fatValue > 0 ? fatValue : maxValues.fat }
     });
   }, [searchTerm, selectedCategories, caloriesValue, proteinValue, carbsValue, fatValue]);
+
+  // Reset local state when parent component resets filters
+  useEffect(() => {
+    // Check if all filters are reset in the parent component
+    const parentFiltersReset = 
+      maxValues && 
+      !selectedCategories.length && 
+      !searchTerm && 
+      !caloriesValue && 
+      !proteinValue && 
+      !carbsValue && 
+      !fatValue;
+    
+    if (parentFiltersReset) {
+      resetFilters();
+    }
+  }, [maxValues]);
+
+  // Expose resetFilters function via ref
+  useImperativeHandle(ref, () => ({
+    resetFilters
+  }));
 
   const toggleCategorySelection = (categoryId: string) => {
     console.log('Toggling category:', categoryId);
@@ -140,6 +159,16 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
     setFatValue(0);
     setIsCategoryDropdownOpen(false);
     closeDrawer();
+    
+    // Explicitly update parent component with reset values
+    onFilterChange({
+      searchTerm: '',
+      selectedCategories: [],
+      calories: { min: 0, max: maxValues.calories },
+      protein: { min: 0, max: maxValues.protein },
+      carbs: { min: 0, max: maxValues.carbs },
+      fat: { min: 0, max: maxValues.fat }
+    });
   };
 
   const openDrawer = () => {
@@ -159,23 +188,6 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
     }).start(() => {
       setIsFilterVisible(false);
     });
-  };
-
-  // Toggle filter section visibility
-  const toggleFilterSection = () => {
-    const newExpandedState = !isFilterSectionExpanded;
-    setIsFilterSectionExpanded(newExpandedState);
-    
-    Animated.timing(filterSectionHeight, {
-      toValue: newExpandedState ? 1 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-    
-    // Close category dropdown when collapsing
-    if (!newExpandedState && isCategoryDropdownOpen) {
-      setIsCategoryDropdownOpen(false);
-    }
   };
 
   const renderSingleSlider = (
@@ -219,10 +231,10 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
   );
 
   return (
-    <View className="mb-4">
+    <View className="mb-0">
       {/* Search bar and toggle button */}
       <View className="flex-row items-center justify-between mb-2">
-        <View className="flex-row items-center bg-white rounded-lg px-3 py-2 flex-1 mr-2">
+        <View className="flex-row items-center bg-white rounded-lg px-3 py-2 flex-1">
           <Ionicons name="search" size={20} color={colors.text.secondary} />
           <TextInput
             className="flex-1 ml-2 text-base"
@@ -236,29 +248,10 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
             </TouchableOpacity>
           ) : null}
         </View>
-        
-        {/* Toggle filter section button */}
-        <TouchableOpacity 
-          className="bg-white rounded-lg p-2"
-          onPress={toggleFilterSection}
-        >
-          <Ionicons 
-            name={isFilterSectionExpanded ? "chevron-up-outline" : "chevron-down-outline"} 
-            size={24} 
-            color={colors.text.secondary} 
-          />
-        </TouchableOpacity>
       </View>
 
       {/* Collapsible filter section */}
-      <Animated.View style={{ 
-        maxHeight: filterSectionHeight.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 500] // Adjust this value based on your content
-        }),
-        overflow: 'hidden',
-        opacity: filterSectionHeight
-      }}>
+      <View>
         {/* Filter button and selected filters summary */}
         <View className="flex-row justify-between items-center mb-2">
           <TouchableOpacity 
@@ -299,46 +292,7 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
             )}
           </View>
         </View>
-      </Animated.View>
-
-      {/* Show active filter indicators when collapsed */}
-      {!isFilterSectionExpanded && (selectedCategories.length > 0 || caloriesValue > 0 || proteinValue > 0 || carbsValue > 0 || fatValue > 0) && (
-        <View className="flex-row flex-wrap mt-1 mb-2">
-          {selectedCategories.length > 0 && (
-            <View className="bg-primary-green/10 rounded-full px-2 py-1 mr-2 mb-1">
-              <Text className="text-xs text-primary-green">{selectedCategories.length} kategorier</Text>
-            </View>
-          )}
-          {caloriesValue > 0 && (
-            <View className="bg-primary-green/10 rounded-full px-2 py-1 mr-2 mb-1">
-              <Text className="text-xs text-primary-green">Kalorier: {caloriesValue} kcal</Text>
-            </View>
-          )}
-          {proteinValue > 0 && (
-            <View className="bg-primary-green/10 rounded-full px-2 py-1 mr-2 mb-1">
-              <Text className="text-xs text-primary-green">Protein: {proteinValue}g</Text>
-            </View>
-          )}
-          {carbsValue > 0 && (
-            <View className="bg-primary-green/10 rounded-full px-2 py-1 mr-2 mb-1">
-              <Text className="text-xs text-primary-green">Karbs: {carbsValue}g</Text>
-            </View>
-          )}
-          {fatValue > 0 && (
-            <View className="bg-primary-green/10 rounded-full px-2 py-1 mr-2 mb-1">
-              <Text className="text-xs text-primary-green">Fett: {fatValue}g</Text>
-            </View>
-          )}
-          {(selectedCategories.length > 0 || caloriesValue > 0 || proteinValue > 0 || carbsValue > 0 || fatValue > 0) && (
-            <TouchableOpacity 
-              onPress={resetFilters}
-              className="bg-gray-200 rounded-full p-1 mb-1 self-center"
-            >
-              <Ionicons name="close" size={16} color={colors.text.secondary} />
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      </View>
 
       {/* Bottom drawer for filters */}
       <Modal
@@ -372,44 +326,46 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-              {/* Categories section */}
-              <View className="mb-6">
-                <Text className="font-medium mb-2">Kategorier</Text>
-                
-                {/* Category dropdown */}
-                <TouchableOpacity 
-                  className="flex-row justify-between items-center bg-white rounded-lg px-3 py-2 mb-2"
-                  onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                >
-                  <Text>{selectedCategories.length > 0 ? `${selectedCategories.length} kategorier valgt` : 'Velg kategorier'}</Text>
-                  <Ionicons 
-                    name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color={colors.text.secondary} 
-                  />
-                </TouchableOpacity>
+              {/* Categories section - only show if not hidden */}
+              {!hideCategoryFilter && (
+                <View className="mb-6">
+                  <Text className="font-medium mb-2">Kategorier</Text>
+                  
+                  {/* Category dropdown */}
+                  <TouchableOpacity 
+                    className="flex-row justify-between items-center bg-white rounded-lg px-3 py-2 mb-2"
+                    onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  >
+                    <Text>{selectedCategories.length > 0 ? `${selectedCategories.length} kategorier valgt` : 'Velg kategorier'}</Text>
+                    <Ionicons 
+                      name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color={colors.text.secondary} 
+                    />
+                  </TouchableOpacity>
 
-                {isCategoryDropdownOpen && (
-                  <View className="bg-white rounded-lg p-3 mb-4">
-                    <ScrollView style={{ maxHeight: 150 }}>
-                      {(categories || []).map(category => (
-                        <TouchableOpacity
-                          key={category._id}
-                          className="flex-row items-center py-2"
-                          onPress={() => toggleCategorySelection(category._id)}
-                        >
-                          <View className={`w-5 h-5 rounded border ${selectedCategories.includes(category._id) ? 'bg-primary-green border-primary-green' : 'border-gray-300'} mr-2 items-center justify-center`}>
-                            {selectedCategories.includes(category._id) && (
-                              <Ionicons name="checkmark" size={16} color="white" />
-                            )}
-                          </View>
-                          <Text>{category.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
+                  {isCategoryDropdownOpen && (
+                    <View className="bg-white rounded-lg p-3 mb-4">
+                      <ScrollView style={{ maxHeight: 150 }}>
+                        {(categories || []).map(category => (
+                          <TouchableOpacity
+                            key={category._id}
+                            className="flex-row items-center py-2"
+                            onPress={() => toggleCategorySelection(category._id)}
+                          >
+                            <View className={`w-5 h-5 rounded border ${selectedCategories.includes(category._id) ? 'bg-primary-green border-primary-green' : 'border-gray-300'} mr-2 items-center justify-center`}>
+                              {selectedCategories.includes(category._id) && (
+                                <Ionicons name="checkmark" size={16} color="white" />
+                              )}
+                            </View>
+                            <Text>{category.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
               
               <Text className="text-text-secondary mb-4">Dra glidebryterne for å filtrere oppskrifter basert på næringsinnhold.</Text>
               
@@ -446,7 +402,7 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
       </Modal>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   drawer: {
@@ -466,4 +422,6 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   }
-}); 
+});
+
+export default RecipeFilters; 

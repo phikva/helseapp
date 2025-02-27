@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { urlFor } from '@/lib/sanity';
 import RecipeListSkeleton from '../../components/skeleton/RecipeListSkeleton';
 import RecipeFilters from '../../components/RecipeFilters';
-import { colors } from '../../../lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useContentStore } from '../../../lib/store/contentStore';
 
@@ -33,11 +32,35 @@ interface FilterValues {
   fat: { min: number; max: number };
 }
 
+// Array of Tailwind background color classes to cycle through
+const bgColors = [
+  'bg-primary-green',
+  'bg-primary-cyan',
+  'bg-primary-purple',
+  'bg-primary-pink',
+  'bg-primary-blue',
+  'bg-primary-black',
+];
+
+// Helper function to shuffle an array
+const shuffleArray = (array: any[]) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export default function RecipesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { recipes, categories, isLoading: contentLoading, error: contentError, refreshContent, isCacheStale } = useContentStore();
+  const recipeFiltersRef = useRef<any>(null);
+  
+  // Generate shuffled colors array
+  const shuffledColors = useMemo(() => shuffleArray(bgColors), []);
   
   // Filter state
   const [filters, setFilters] = useState<FilterValues>({
@@ -214,14 +237,19 @@ export default function RecipesScreen() {
     });
   }, [recipes, filters]);
 
+  // Helper function to get color for an index
+  const getColorForIndex = (index: number) => {
+    return shuffledColors[index % shuffledColors.length];
+  };
+
   if (loading || contentLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+      <SafeAreaView className="flex-1 bg-primary-light pt-12">
         <Stack.Screen 
           options={{
             title: 'Oppskrifter',
             headerShadowVisible: false,
-            headerStyle: { backgroundColor: colors.primary.light },
+            headerStyle: { backgroundColor: '#FCFCEC' },
             headerTitleStyle: { fontFamily: 'Montaga-Regular' },
           }} 
         />
@@ -232,12 +260,12 @@ export default function RecipesScreen() {
 
   if (error || contentError) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48, paddingBottom: 0 }}>
+      <SafeAreaView className="flex-1 bg-primary-light pt-12 pb-0">
         <Stack.Screen 
           options={{
             title: 'Oppskrifter',
             headerShadowVisible: false,
-            headerStyle: { backgroundColor: colors.primary.light },
+            headerStyle: { backgroundColor: '#FCFCEC' },
             headerTitleStyle: { fontFamily: 'Montaga-Regular' },
           }} 
         />
@@ -255,12 +283,12 @@ export default function RecipesScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 10 }}>
+    <SafeAreaView className="flex-1 bg-primary-light pt-10">
       <Stack.Screen 
         options={{
           title: 'Oppskrifter',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.primary.light },
+          headerStyle: { backgroundColor: '#FCFCEC' },
           headerTitleStyle: { fontFamily: 'Montaga-Regular', fontSize: 32 },
         }} 
       />
@@ -269,6 +297,7 @@ export default function RecipesScreen() {
         <RecipeFilters 
           onFilterChange={handleFilterChange}
           maxValues={maxValues}
+          ref={recipeFiltersRef}
         />
       </View>
       
@@ -285,6 +314,7 @@ export default function RecipesScreen() {
           filters.fat.max < maxValues.fat) && (
           <TouchableOpacity 
             onPress={() => {
+              // Reset filters in parent component
               setFilters({
                 searchTerm: '',
                 selectedCategories: [],
@@ -293,6 +323,11 @@ export default function RecipesScreen() {
                 carbs: { min: 0, max: maxValues.carbs },
                 fat: { min: 0, max: maxValues.fat }
               });
+              
+              // Call resetFilters directly on the RecipeFilters component
+              if (recipeFiltersRef.current) {
+                recipeFiltersRef.current.resetFilters();
+              }
             }}
             className="bg-gray-200 rounded-lg px-3 py-1"
           >
@@ -305,58 +340,64 @@ export default function RecipesScreen() {
         <View className="px-4 pt-2">
           {!filteredRecipes || filteredRecipes.length === 0 ? (
             <View className="items-center justify-center py-10">
-              <Ionicons name="search-outline" size={48} color={colors.text.secondary} />
+              <Ionicons name="search-outline" size={48} color="#3C3C43" />
               <Text className="text-text-secondary text-center mt-4 text-lg">Ingen oppskrifter funnet</Text>
               <Text className="text-text-secondary text-center mt-1">Prøv å justere filtrene dine</Text>
             </View>
           ) : (
             <View className="space-y-4">
-              {filteredRecipes.map((recipe) => (
-                <TouchableOpacity
-                  key={recipe._id}
-                  className="bg-white rounded-2xl shadow-sm overflow-hidden"
-                  onPress={() => {
-                    router.push({
-                      pathname: '/recipes/[id]',
-                      params: { id: recipe._id }
-                    });
-                  }}
-                >
-                  <Image
-                    source={{ uri: recipe.image ? urlFor(recipe.image).width(400).height(200).url() : 'https://via.placeholder.com/400x200.png?text=No+Image' }}
-                    className="w-full h-48"
-                    resizeMode="cover"
-                  />
-                  <View className="p-4">
-                    <Text className="font-heading-serif text-xl mb-2">{recipe.tittel}</Text>
-                    
-                    {/* Categories */}
-                    <View className="flex-row flex-wrap gap-2 mb-2">
-                      {(recipe.kategorier || []).map((kategori) => (
-                        <TouchableOpacity
-                          key={kategori._id}
-                          onPress={() => {
-                            router.push({
-                              pathname: '/categories/[id]',
-                              params: { id: kategori._id }
-                            });
-                          }}
-                          className="bg-primary-green/10 px-2 py-1 rounded-full"
-                        >
-                          <Text className="text-sm text-primary-green">{kategori.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+              {filteredRecipes.map((recipe, index) => {
+                const bgColorClass = getColorForIndex(index);
+                // Extract just the color name without the 'bg-primary-' prefix
+                const colorName = bgColorClass.replace('bg-primary-', '');
+                
+                return (
+                  <TouchableOpacity
+                    key={recipe._id}
+                    className={`${bgColorClass} rounded-2xl shadow-sm overflow-hidden`}
+                    onPress={() => {
+                      router.push({
+                        pathname: '/recipes/[id]',
+                        params: { id: recipe._id, color: colorName }
+                      });
+                    }}
+                  >
+                    <Image
+                      source={{ uri: recipe.image ? urlFor(recipe.image).width(400).height(200).url() : 'https://via.placeholder.com/400x200.png?text=No+Image' }}
+                      className="w-full h-48"
+                      resizeMode="cover"
+                    />
+                    <View className="p-4">
+                      <Text className="font-heading-serif text-xl mb-2 text-text-white">{recipe.tittel}</Text>
+                      
+                      {/* Categories */}
+                      <View className="flex-row flex-wrap gap-2 mb-2">
+                        {(recipe.kategorier || []).map((kategori) => (
+                          <TouchableOpacity
+                            key={kategori._id}
+                            onPress={() => {
+                              router.push({
+                                pathname: '/categories/[id]',
+                                params: { id: kategori._id }
+                              });
+                            }}
+                            className="bg-white/20 px-2 py-1 rounded-full"
+                          >
+                            <Text className="text-sm text-white">{kategori.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
 
-                    <Text className="text-text-secondary">Kalorier: {recipe.totalKcal || 0} kcal</Text>
-                    <View className="flex-row justify-between mt-2">
-                      <Text className="text-text-secondary">Protein: {recipe.totalMakros?.protein || 0}g</Text>
-                      <Text className="text-text-secondary">Karbohydrater: {recipe.totalMakros?.karbs || 0}g</Text>
-                      <Text className="text-text-secondary">Fett: {recipe.totalMakros?.fett || 0}g</Text>
+                      <Text className="text-text-white">Kalorier: {recipe.totalKcal || 0} kcal</Text>
+                      <View className="flex-row justify-between mt-2">
+                        <Text className="text-text-white">Protein: {recipe.totalMakros?.protein || 0}g</Text>
+                        <Text className="text-text-white">Karbohydrater: {recipe.totalMakros?.karbs || 0}g</Text>
+                        <Text className="text-text-white">Fett: {recipe.totalMakros?.fett || 0}g</Text>
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </View>

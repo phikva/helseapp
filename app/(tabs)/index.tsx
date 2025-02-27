@@ -1,13 +1,12 @@
 import { StyleSheet, View, TouchableOpacity, SafeAreaView, Text, ScrollView, useWindowDimensions, Image } from 'react-native';
 import { HelloWave } from '@components/HelloWave';
 import { useAuthStore } from '@store/authStore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { TopHeader } from '@components/ui/TopHeader';
 import { client, urlFor } from '@/lib/sanity';
 import { useRouter } from 'expo-router';
 import HomeScreenSkeleton from '../components/skeleton/HomeScreenSkeleton'
-import { colors } from '../../lib/theme';
 import { useContentStore } from '../../lib/store/contentStore';
 
 interface Recipe {
@@ -28,71 +27,89 @@ interface Category {
   image?: string;
 }
 
+// Array of Tailwind background color classes to cycle through
+const bgColors = [
+  'bg-primary-green',
+  'bg-primary-cyan',
+  'bg-primary-purple',
+  'bg-primary-pink',
+  'bg-primary-blue',
+  'bg-primary-black',
+];
+
+// Helper function to shuffle an array
+const shuffleArray = (array: any[]) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 // Pagination component
 const PaginationDots = ({ total, current }: { total: number; current: number }) => (
   <View className="flex-row justify-center space-x-1 mt-2">
     {Array.from({ length: total }).map((_, index) => (
       <View
         key={index}
-        style={{
-          height: 8,
-          borderRadius: 4,
-          width: index === current ? 24 : 8,
-          backgroundColor: index === current ? colors.primary.green : '#D1D1D6',
-          marginHorizontal: 2
-        }}
+        className={`h-2 rounded-full mx-0.5 ${index === current ? 'w-6 bg-primary-green' : 'w-2 bg-gray-300'}`}
       />
     ))}
   </View>
 );
 
 // Recipe Card Component
-const RecipeCard = ({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) => (
-  <TouchableOpacity 
-    onPress={onPress}
-    className="h-40 w-64 bg-white rounded-2xl mr-4 overflow-hidden shadow-sm"
-  >
-    <Image
-      source={{ uri: recipe.image ? urlFor(recipe.image).width(256).height(120).url() : 'https://via.placeholder.com/256x120.png?text=No+Image' }}
-      className="w-full h-24"
-      resizeMode="cover"
-    />
-    <View className="p-2">
-      <Text className="font-heading-serif text-body-large" numberOfLines={1}>
-        {recipe.tittel}
-      </Text>
-      <Text className="text-text-secondary text-body-small">
-        {recipe.totalKcal || 0} kcal
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
-
-// Category Card Component
-const CategoryCard = ({ category, onPress }: { category: Category; onPress: () => void }) => (
-  <TouchableOpacity 
-    onPress={onPress}
-    className="h-48 w-80 bg-white rounded-2xl mr-4 overflow-hidden shadow-sm"
-  >
-    {category.image && (
+const RecipeCard = ({ recipe, onPress, colorClass }: { recipe: Recipe; onPress: () => void; colorClass: string }) => {
+  return (
+    <TouchableOpacity 
+      onPress={onPress}
+      className={`h-40 w-64 ${colorClass} rounded-2xl mr-4 overflow-hidden shadow-sm`}
+    >
       <Image
-        source={{ uri: urlFor(category.image).width(320).height(140).url() }}
-        className="w-full h-32"
+        source={{ uri: recipe.image ? urlFor(recipe.image).width(256).height(120).url() : 'https://via.placeholder.com/256x120.png?text=No+Image' }}
+        className="w-full h-24"
         resizeMode="cover"
       />
-    )}
-    <View className="p-3">
-      <Text className="font-heading-serif text-2xl" numberOfLines={1}>
-        {category.name}
-      </Text>
-      {category.description && (
-        <Text className="text-text-secondary text-body-small" numberOfLines={2}>
-          {category.description}
+      <View className="p-2">
+        <Text className="font-heading-serif text-body-large text-text-white" numberOfLines={1}>
+          {recipe.tittel}
         </Text>
+        <Text className="text-text-white text-body-small">
+          {recipe.totalKcal || 0} kcal
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// Category Card Component
+const CategoryCard = ({ category, onPress, colorClass }: { category: Category; onPress: () => void; colorClass: string }) => {
+  return (
+    <TouchableOpacity 
+      onPress={onPress}
+      className={`h-48 w-80 ${colorClass} rounded-2xl mr-4 overflow-hidden shadow-sm`}
+    >
+      {category.image && (
+        <Image
+          source={{ uri: urlFor(category.image).width(320).height(140).url() }}
+          className="w-full h-32"
+          resizeMode="cover"
+        />
       )}
-    </View>
-  </TouchableOpacity>
-);
+      <View className="p-3">
+        <Text className="font-heading-serif text-2xl text-text-white" numberOfLines={1}>
+          {category.name}
+        </Text>
+        {category.description && (
+          <Text className="text-text-white text-body-small" numberOfLines={2}>
+            {category.description}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export default function HomeScreen() {
   const { signOut } = useAuthStore();
@@ -108,6 +125,12 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const router = useRouter();
   const { recipes, categories: cachedCategories, isLoading: contentLoading, refreshContent, isCacheStale } = useContentStore();
+
+  // Generate shuffled color arrays for each section
+  const categoryColors = useMemo(() => shuffleArray(bgColors), []);
+  const inspirationColors = useMemo(() => shuffleArray(bgColors), []);
+  const popularColors = useMemo(() => shuffleArray(bgColors), []);
+  const recentColors = useMemo(() => shuffleArray(bgColors), []);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -146,14 +169,19 @@ export default function HomeScreen() {
     setter(currentIndex);
   };
 
+  // Helper function to get color for an item in a section
+  const getColorForIndex = (index: number, colorArray: string[]) => {
+    return colorArray[index % colorArray.length];
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+    <SafeAreaView className="flex-1 bg-primary-light pt-12">
       <TopHeader />
-      <View style={{ height: 24, backgroundColor: '#FCFCEC' }} />
+      <View className="h-6 bg-primary-light" />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-4 pt-8">
           {/* Categories Section */}
-          <View className="flex-row items-center justify-between pt-4">
+          <View className="flex-row items-center justify-between pt-0">
             <Text className="text-4xl font-heading-serif">Kategorier</Text>
           </View>
 
@@ -169,10 +197,11 @@ export default function HomeScreen() {
               decelerationRate="fast"
               snapToInterval={320 + 16}
             >
-              {categories.map((category) => (
+              {categories.map((category, index) => (
                 <CategoryCard
                   key={category._id}
                   category={category}
+                  colorClass={getColorForIndex(index, categoryColors)}
                   onPress={() => router.push(`/categories/${category._id}`)}
                 />
               ))}
@@ -194,13 +223,21 @@ export default function HomeScreen() {
               decelerationRate="fast"
               snapToInterval={256 + 16}
             >
-              {inspirationalRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe._id}
-                  recipe={recipe}
-                  onPress={() => router.push(`/recipes/${recipe._id}`)}
-                />
-              ))}
+              {inspirationalRecipes.map((recipe, index) => {
+                const colorClass = getColorForIndex(index, inspirationColors);
+                const colorName = colorClass.replace('bg-primary-', '');
+                return (
+                  <RecipeCard
+                    key={recipe._id}
+                    recipe={recipe}
+                    colorClass={colorClass}
+                    onPress={() => router.push({
+                      pathname: '/recipes/[id]',
+                      params: { id: recipe._id, color: colorName }
+                    })}
+                  />
+                );
+              })}
             </ScrollView>
             <PaginationDots total={inspirationalRecipes.length} current={currentRecipes} />
           </View>
@@ -219,13 +256,21 @@ export default function HomeScreen() {
               decelerationRate="fast"
               snapToInterval={256 + 16}
             >
-              {popularRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe._id}
-                  recipe={recipe}
-                  onPress={() => router.push(`/recipes/${recipe._id}`)}
-                />
-              ))}
+              {popularRecipes.map((recipe, index) => {
+                const colorClass = getColorForIndex(index, popularColors);
+                const colorName = colorClass.replace('bg-primary-', '');
+                return (
+                  <RecipeCard
+                    key={recipe._id}
+                    recipe={recipe}
+                    colorClass={colorClass}
+                    onPress={() => router.push({
+                      pathname: '/recipes/[id]',
+                      params: { id: recipe._id, color: colorName }
+                    })}
+                  />
+                );
+              })}
             </ScrollView>
             <PaginationDots total={popularRecipes.length} current={currentFoodRecipes} />
           </View>
@@ -243,13 +288,21 @@ export default function HomeScreen() {
               decelerationRate="fast"
               snapToInterval={256 + 16}
             >
-              {recentRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe._id}
-                  recipe={recipe}
-                  onPress={() => router.push(`/recipes/${recipe._id}`)}
-                />
-              ))}
+              {recentRecipes.map((recipe, index) => {
+                const colorClass = getColorForIndex(index, recentColors);
+                const colorName = colorClass.replace('bg-primary-', '');
+                return (
+                  <RecipeCard
+                    key={recipe._id}
+                    recipe={recipe}
+                    colorClass={colorClass}
+                    onPress={() => router.push({
+                      pathname: '/recipes/[id]',
+                      params: { id: recipe._id, color: colorName }
+                    })}
+                  />
+                );
+              })}
             </ScrollView>
             <PaginationDots total={recentRecipes.length} current={currentWeeklyPlan} />
           </View>

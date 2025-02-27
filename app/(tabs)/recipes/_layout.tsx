@@ -32,8 +32,8 @@ export default function RecipesLayout() {
             headerBackVisible: false,
             headerTitle: '',
             headerLeft: () => (
-              <View style={{ marginLeft: 0 }}>
-                <Text className="font-heading-serif text-display-small text-primary-Black">
+              <View style={{ marginLeft: 0, paddingBottom: 10 }}>
+                <Text className="font-heading-serif text-4xl text-primary-Black">
                   Oppskrifter
                 </Text>
               </View>

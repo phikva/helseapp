@@ -2,16 +2,15 @@ import React from 'react';
 import { View, SafeAreaView, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import CategoryList from '../../components/CategoryList';
-import { colors } from '../../../lib/theme';
 
 export default function CategoriesScreen() {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 10, paddingBottom: 0 }}>
+    <SafeAreaView className="flex-1 bg-primary-light pt-10 pb-0">
       <Stack.Screen 
         options={{
           title: 'Kategorier',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.primary.light },
+          headerStyle: { backgroundColor: '#FCFCEC' },
           headerTitleStyle: { fontFamily: 'Montaga-Regular', fontSize: 32 },
         }} 
       />
