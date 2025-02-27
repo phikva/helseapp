@@ -67,18 +67,33 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const fetchRecipes = async () => {
     try {
+      console.log('Fetching recipes from Sanity...');
       const query = `*[_type == "oppskrift"] {
         _id,
         tittel,
         image,
-        kategorier[]->{
+        "kategorier": kategori[]->{
           _id,
           name
         },
         totalKcal,
         totalMakros
       }`;
+      console.log('Recipe query:', query);
       const data = await client.fetch<Recipe[]>(query);
+      console.log(`Fetched ${data.length} recipes`);
+      
+      // Log the first recipe to check its structure
+      if (data.length > 0) {
+        console.log('First recipe:', JSON.stringify(data[0], null, 2));
+        
+        // Check if recipes have categories
+        const recipesWithCategories = data.filter(recipe => 
+          recipe.kategorier && Array.isArray(recipe.kategorier) && recipe.kategorier.length > 0
+        );
+        console.log(`Recipes with categories: ${recipesWithCategories.length} out of ${data.length}`);
+      }
+      
       setRecipes(data);
     } catch (error) {
       console.error('Error fetching recipes:', error);

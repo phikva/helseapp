@@ -149,6 +149,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
       <TopHeader />
+      <View style={{ height: 24, backgroundColor: '#FCFCEC' }} />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-4 pt-8">
           {/* Categories Section */}

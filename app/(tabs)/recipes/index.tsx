@@ -68,6 +68,32 @@ export default function RecipesScreen() {
       
       // Calculate max values for filters based on actual data
       if (recipes && recipes.length > 0) {
+        console.log('First recipe structure:', JSON.stringify(recipes[0], null, 2));
+        
+        // Check if recipes have categories
+        const recipesWithCategories = recipes.filter(recipe => 
+          recipe.kategorier && Array.isArray(recipe.kategorier) && recipe.kategorier.length > 0
+        );
+        console.log(`Recipes with categories: ${recipesWithCategories.length} out of ${recipes.length}`);
+        
+        if (recipesWithCategories.length > 0) {
+          console.log('Sample recipe categories:', JSON.stringify(recipesWithCategories[0].kategorier, null, 2));
+        } else {
+          console.log('WARNING: No recipes have categories!');
+          
+          // Log all recipes to see their structure
+          recipes.forEach((recipe, index) => {
+            console.log(`Recipe ${index} (${recipe.tittel}) kategorier:`, 
+              recipe.kategorier ? 
+                (Array.isArray(recipe.kategorier) ? 
+                  (recipe.kategorier.length > 0 ? 
+                    JSON.stringify(recipe.kategorier) : 
+                    'Empty array') : 
+                  'Not an array') : 
+                'Undefined');
+          });
+        }
+        
         const maxCalories = Math.max(...recipes.map((recipe) => recipe.totalKcal || 0));
         const maxProtein = Math.max(...recipes.map((recipe) => recipe.totalMakros?.protein || 0));
         const maxCarbs = Math.max(...recipes.map((recipe) => recipe.totalMakros?.karbs || 0));
@@ -97,6 +123,17 @@ export default function RecipesScreen() {
   }, [recipes, isCacheStale, refreshContent]);
 
   const handleFilterChange = (newFilters: FilterValues) => {
+    console.log('Filter changed:', JSON.stringify(newFilters.selectedCategories));
+    
+    // Log the category names for better debugging
+    if (newFilters.selectedCategories.length > 0 && categories) {
+      const selectedCategoryNames = newFilters.selectedCategories.map(catId => {
+        const category = categories.find(cat => cat._id === catId);
+        return category ? `${category.name} (${catId})` : `Unknown (${catId})`;
+      });
+      console.log('Selected category names:', selectedCategoryNames);
+    }
+    
     setFilters(newFilters);
   };
 
@@ -104,19 +141,49 @@ export default function RecipesScreen() {
   const filteredRecipes = useMemo(() => {
     if (!recipes) return [];
     
+    console.log('Filtering recipes with categories:', filters.selectedCategories);
+    
     return recipes.filter(recipe => {
       // Filter by search term
       if (filters.searchTerm && !recipe.tittel.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
         return false;
       }
       
-      // Filter by categories
+      // Filter by categories - show recipes that have ANY of the selected categories
       if (filters.selectedCategories.length > 0) {
-        const recipeCategories = recipe.kategorier?.map(cat => cat._id) || [];
-        const hasAllSelectedCategories = filters.selectedCategories.every(catId => 
+        // Check if recipe has kategorier property and it's properly structured
+        if (!recipe.kategorier) {
+          console.log(`Recipe "${recipe.tittel}" has no kategorier property`);
+          return false;
+        }
+        
+        // Ensure kategorier is an array
+        if (!Array.isArray(recipe.kategorier)) {
+          console.log(`Recipe "${recipe.tittel}" kategorier is not an array:`, recipe.kategorier);
+          return false;
+        }
+        
+        // Extract category IDs, handling potential missing _id fields
+        const recipeCategories = recipe.kategorier
+          .filter(cat => cat && typeof cat === 'object' && cat._id)
+          .map(cat => cat._id);
+        
+        console.log('Recipe categories for', recipe.tittel, ':', recipeCategories);
+        
+        // If recipe has no valid categories, filter it out
+        if (recipeCategories.length === 0) {
+          console.log(`Recipe "${recipe.tittel}" has no valid categories`);
+          return false;
+        }
+        
+        // Check if the recipe has any of the selected categories
+        const hasMatchingCategory = filters.selectedCategories.some(catId => 
           recipeCategories.includes(catId)
         );
-        if (!hasAllSelectedCategories) return false;
+        
+        console.log(`Recipe "${recipe.tittel}" matches selected categories: ${hasMatchingCategory}`);
+        
+        if (!hasMatchingCategory) return false;
       }
       
       // Filter by calories - only if min > 0 or max < maxValue

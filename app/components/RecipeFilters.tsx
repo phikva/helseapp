@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Animated, Dimensions, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Animated, Dimensions, StyleSheet, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { colors } from '../../lib/theme';
@@ -59,7 +59,33 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
   const [isFilterSectionExpanded, setIsFilterSectionExpanded] = useState(true);
   const [filterSectionHeight] = useState(new Animated.Value(1));
 
+  // Pan responder for draggable drawer
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          // Only allow dragging down
+          drawerAnim.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > DRAWER_HEIGHT / 3) {
+          // If dragged down more than 1/3 of drawer height, close it
+          closeDrawer();
+        } else {
+          // Otherwise snap back to open position
+          Animated.spring(drawerAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   useEffect(() => {
+    console.log('Selected categories in RecipeFilters:', selectedCategories);
     // Update parent component with filter values
     onFilterChange({
       searchTerm,
@@ -72,11 +98,37 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
   }, [searchTerm, selectedCategories, caloriesValue, proteinValue, carbsValue, fatValue]);
 
   const toggleCategorySelection = (categoryId: string) => {
+    console.log('Toggling category:', categoryId);
+    console.log('Current selected categories:', selectedCategories);
+    
+    // Find the category name for logging
+    const categoryName = categories.find(cat => cat._id === categoryId)?.name || 'Unknown';
+    
+    let newCategories;
+    
     if (selectedCategories.includes(categoryId)) {
-      setSelectedCategories(selectedCategories.filter(id => id !== categoryId));
+      console.log(`Removing category: ${categoryName} (${categoryId})`);
+      newCategories = selectedCategories.filter(id => id !== categoryId);
     } else {
-      setSelectedCategories([...selectedCategories, categoryId]);
+      console.log(`Adding category: ${categoryName} (${categoryId})`);
+      newCategories = [...selectedCategories, categoryId];
     }
+    
+    console.log('New selected categories:', newCategories);
+    setSelectedCategories(newCategories);
+    
+    // Immediately update parent component with new categories
+    const updatedFilters = {
+      searchTerm,
+      selectedCategories: newCategories,
+      calories: { min: 0, max: caloriesValue > 0 ? caloriesValue : maxValues.calories },
+      protein: { min: 0, max: proteinValue > 0 ? proteinValue : maxValues.protein },
+      carbs: { min: 0, max: carbsValue > 0 ? carbsValue : maxValues.carbs },
+      fat: { min: 0, max: fatValue > 0 ? fatValue : maxValues.fat }
+    };
+    
+    console.log('Sending updated filters to parent:', updatedFilters);
+    onFilterChange(updatedFilters);
   };
 
   const resetFilters = () => {
@@ -247,40 +299,6 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
             )}
           </View>
         </View>
-
-        {/* Category dropdown */}
-        <TouchableOpacity 
-          className="flex-row justify-between items-center bg-white rounded-lg px-3 py-2 mb-2"
-          onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-        >
-          <Text>{selectedCategories.length > 0 ? `${selectedCategories.length} kategorier valgt` : 'Velg kategorier'}</Text>
-          <Ionicons 
-            name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"} 
-            size={20} 
-            color={colors.text.secondary} 
-          />
-        </TouchableOpacity>
-
-        {isCategoryDropdownOpen && (
-          <View className="bg-white rounded-lg p-3 mb-2">
-            <ScrollView style={{ maxHeight: 150 }}>
-              {(categories || []).map(category => (
-                <TouchableOpacity
-                  key={category._id}
-                  className="flex-row items-center py-2"
-                  onPress={() => toggleCategorySelection(category._id)}
-                >
-                  <View className={`w-5 h-5 rounded border ${selectedCategories.includes(category._id) ? 'bg-primary-green border-primary-green' : 'border-gray-300'} mr-2 items-center justify-center`}>
-                    {selectedCategories.includes(category._id) && (
-                      <Ionicons name="checkmark" size={16} color="white" />
-                    )}
-                  </View>
-                  <Text>{category.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
       </Animated.View>
 
       {/* Show active filter indicators when collapsed */}
@@ -341,7 +359,10 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
               { transform: [{ translateY: drawerAnim }] }
             ]}
           >
-            <View className="w-16 h-1 bg-gray-300 rounded-full self-center mb-4 mt-2" />
+            {/* Draggable handle */}
+            <View {...panResponder.panHandlers}>
+              <View className="w-16 h-1 bg-gray-300 rounded-full self-center mb-4 mt-2" />
+            </View>
             
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-xl font-bold">Filtrer oppskrifter</Text>
@@ -351,6 +372,45 @@ export default function RecipeFilters({ onFilterChange, maxValues }: RecipeFilte
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+              {/* Categories section */}
+              <View className="mb-6">
+                <Text className="font-medium mb-2">Kategorier</Text>
+                
+                {/* Category dropdown */}
+                <TouchableOpacity 
+                  className="flex-row justify-between items-center bg-white rounded-lg px-3 py-2 mb-2"
+                  onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                >
+                  <Text>{selectedCategories.length > 0 ? `${selectedCategories.length} kategorier valgt` : 'Velg kategorier'}</Text>
+                  <Ionicons 
+                    name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color={colors.text.secondary} 
+                  />
+                </TouchableOpacity>
+
+                {isCategoryDropdownOpen && (
+                  <View className="bg-white rounded-lg p-3 mb-4">
+                    <ScrollView style={{ maxHeight: 150 }}>
+                      {(categories || []).map(category => (
+                        <TouchableOpacity
+                          key={category._id}
+                          className="flex-row items-center py-2"
+                          onPress={() => toggleCategorySelection(category._id)}
+                        >
+                          <View className={`w-5 h-5 rounded border ${selectedCategories.includes(category._id) ? 'bg-primary-green border-primary-green' : 'border-gray-300'} mr-2 items-center justify-center`}>
+                            {selectedCategories.includes(category._id) && (
+                              <Ionicons name="checkmark" size={16} color="white" />
+                            )}
+                          </View>
+                          <Text>{category.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+              
               <Text className="text-text-secondary mb-4">Dra glidebryterne for å filtrere oppskrifter basert på næringsinnhold.</Text>
               
               {/* Calories slider */}

@@ -1,7 +1,14 @@
-import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
-import { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Animated, Dimensions, PanResponder, StatusBar, Modal, StyleSheet } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from './ui/Toast';
+import { IconSymbol } from '../../components/ui/IconSymbol';
+import { Button } from '../../components/ui/Button';
+import { colors } from '../../lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+
+// Get screen dimensions
+const { height, width } = Dimensions.get('window');
 
 interface EditProfileFormProps {
   profile: {
@@ -25,6 +32,59 @@ export default function EditProfileForm({ profile, visible, onClose, onSave }: E
     age: profile.age
   });
   const [loading, setLoading] = useState(false);
+  
+  // Animation values
+  const translateY = useRef(new Animated.Value(height)).current;
+  
+  // Configure pan responder for swipe-to-dismiss
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) { // Only allow downward swipes
+          translateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > height * 0.2 || gestureState.vy > 0.5) {
+          // If drawer is pulled down more than 20% or with high velocity, close it
+          closeDrawer();
+        } else {
+          // Otherwise, snap back to open position
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  // Open drawer animation
+  useEffect(() => {
+    if (visible) {
+      openDrawer();
+    }
+  }, [visible]);
+
+  const openDrawer = () => {
+    Animated.timing(translateY, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeDrawer = () => {
+    Animated.timing(translateY, {
+      toValue: height,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      onClose();
+    });
+  };
 
   const validateProfile = () => {
     if (!formData.full_name.trim()) {
@@ -84,7 +144,7 @@ export default function EditProfileForm({ profile, visible, onClose, onSave }: E
       if (error) throw error;
 
       onSave();
-      onClose();
+      closeDrawer();
       showToast({
         type: 'success',
         title: 'Suksess',
@@ -105,21 +165,51 @@ export default function EditProfileForm({ profile, visible, onClose, onSave }: E
 
   return (
     <Modal
-      visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent={true}
-      onRequestClose={onClose}
+      visible={visible}
+      onRequestClose={closeDrawer}
     >
-      <View className="flex-1 justify-end">
-        <View className="bg-white rounded-t-3xl p-6 h-5/6">
-          <ScrollView>
-            <View className="flex-row justify-between items-center mb-8">
-              <Text className="font-heading-serif text-display-small text-primary-Black">
-                Rediger Profil
-              </Text>
-              <TouchableOpacity onPress={onClose}>
-                <Text className="text-text-secondary text-body-large">Lukk</Text>
-              </TouchableOpacity>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Backdrop */}
+      <View style={StyleSheet.absoluteFill} className="bg-black/30">
+        <TouchableOpacity 
+          style={StyleSheet.absoluteFill} 
+          onPress={closeDrawer}
+          activeOpacity={1}
+        />
+        
+        {/* Full Screen Drawer */}
+        <Animated.View 
+          className="bg-white rounded-t-3xl overflow-hidden absolute bottom-0 left-0 right-0"
+          style={{ 
+            transform: [{ translateY }],
+            height: height * 0.95, // 95% of screen height
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -3 },
+            shadowOpacity: 0.1,
+            shadowRadius: 5,
+            elevation: 10
+          }}
+        >
+          {/* Draggable handle */}
+          <View {...panResponder.panHandlers}>
+            <View className="w-16 h-1 bg-gray-300 rounded-full self-center mb-4 mt-2" />
+          </View>
+          
+          {/* Header */}
+          <View className="flex-row justify-between items-center px-6 mb-6">
+            <Text className="text-xl font-bold text-primary-black">Rediger Profil</Text>
+            <TouchableOpacity onPress={closeDrawer}>
+              <Ionicons name="close" size={24} color={colors.primary.black} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView className="flex-1 px-6">
+            {/* Personal Data Section */}
+            <View className="mb-6">
+              <Text className="text-primary-green text-xl font-semibold mb-4">Personlige data</Text>
             </View>
 
             {/* Full Name Input */}
@@ -130,65 +220,90 @@ export default function EditProfileForm({ profile, visible, onClose, onSave }: E
               <TextInput
                 value={formData.full_name}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, full_name: text }))}
-                className="bg-gray-50 rounded-2xl py-4 px-5 font-body text-body-large"
+                className="bg-primary-light rounded-2xl py-4 px-5 font-body text-body-large"
                 autoCapitalize="words"
+                placeholderTextColor={colors.text.secondary}
               />
             </View>
 
-            {/* Weight Input */}
+            {/* Weight Input with icon */}
             <View className="mb-6">
               <Text className="font-body text-body-medium text-text-secondary mb-2">
                 Vekt (kg)
               </Text>
-              <TextInput
-                value={formData.weight}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, weight: text }))}
-                keyboardType="numeric"
-                className="bg-gray-50 rounded-2xl py-4 px-5 font-body text-body-large"
-                maxLength={3}
-              />
+              <View className="flex-row items-center bg-primary-light rounded-2xl">
+                <View className="pl-5 pr-2">
+                  <View className="w-6 h-6 bg-primary-green/10 rounded-full items-center justify-center">
+                    <IconSymbol name="person.fill" size={14} color={colors.primary.green} />
+                  </View>
+                </View>
+                <TextInput
+                  value={formData.weight}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, weight: text }))}
+                  keyboardType="numeric"
+                  className="flex-1 py-4 pr-5 font-body text-body-large"
+                  maxLength={3}
+                  placeholderTextColor={colors.text.secondary}
+                />
+              </View>
             </View>
 
-            {/* Height Input */}
+            {/* Height Input with icon */}
             <View className="mb-6">
               <Text className="font-body text-body-medium text-text-secondary mb-2">
                 Høyde (cm)
               </Text>
-              <TextInput
-                value={formData.height}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, height: text }))}
-                keyboardType="numeric"
-                className="bg-gray-50 rounded-2xl py-4 px-5 font-body text-body-large"
-                maxLength={3}
-              />
+              <View className="flex-row items-center bg-primary-light rounded-2xl">
+                <View className="pl-5 pr-2">
+                  <View className="w-6 h-6 bg-primary-green/10 rounded-full items-center justify-center">
+                    <IconSymbol name="chevron.up" size={14} color={colors.primary.green} />
+                  </View>
+                </View>
+                <TextInput
+                  value={formData.height}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, height: text }))}
+                  keyboardType="numeric"
+                  className="flex-1 py-4 pr-5 font-body text-body-large"
+                  maxLength={3}
+                  placeholderTextColor={colors.text.secondary}
+                />
+              </View>
             </View>
 
-            {/* Age Input */}
+            {/* Age Input with icon */}
             <View className="mb-8">
               <Text className="font-body text-body-medium text-text-secondary mb-2">
                 Alder
               </Text>
-              <TextInput
-                value={formData.age}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, age: text }))}
-                keyboardType="numeric"
-                className="bg-gray-50 rounded-2xl py-4 px-5 font-body text-body-large"
-                maxLength={3}
-              />
+              <View className="flex-row items-center bg-primary-light rounded-2xl">
+                <View className="pl-5 pr-2">
+                  <View className="w-6 h-6 bg-primary-green/10 rounded-full items-center justify-center">
+                    <IconSymbol name="person.fill" size={14} color={colors.primary.green} />
+                  </View>
+                </View>
+                <TextInput
+                  value={formData.age}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, age: text }))}
+                  keyboardType="numeric"
+                  className="flex-1 py-4 pr-5 font-body text-body-large"
+                  maxLength={3}
+                  placeholderTextColor={colors.text.secondary}
+                />
+              </View>
             </View>
-
-            {/* Save Button */}
-            <TouchableOpacity
+          </ScrollView>
+          
+          {/* Fixed bottom button */}
+          <View className="px-6 py-4 border-t border-gray-100">
+            <Button
               onPress={handleSave}
               disabled={loading}
-              className="bg-primary-Green py-[18px] rounded-full items-center mb-4"
+              className="bg-primary-green"
             >
-              <Text className="text-text font-heading-medium text-body-large">
-                {loading ? 'Lagrer...' : 'Lagre endringer'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
+              {loading ? 'Lagrer...' : 'Lagre endringer'}
+            </Button>
+          </View>
+        </Animated.View>
       </View>
     </Modal>
   );

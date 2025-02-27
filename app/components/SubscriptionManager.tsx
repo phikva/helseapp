@@ -105,7 +105,7 @@ export default function SubscriptionManager({ profileId }: SubscriptionManagerPr
         className="flex-row justify-between items-center mb-6"
         onPress={() => setExpanded(!expanded)}
       >
-        <Text className="font-heading-serif text-xl text-primary-black">Abonnement</Text>
+        <Text className="font-heading-serif text-3xl text-primary-black">Abonnement</Text>
         <View className="bg-primary-cyan/10 p-2 rounded-full">
           <IconSymbol 
             name={expanded ? "chevron.up" : "chevron.down"} 
@@ -137,7 +137,7 @@ export default function SubscriptionManager({ profileId }: SubscriptionManagerPr
 
       {expanded && (
         <View>
-          <Text className="text-text-secondary mb-6">Velg abonnement som passer for deg:</Text>
+          <Text className="text-text-secondary text-lg mb-6">Velg abonnement som passer for deg:</Text>
           
           {subscriptions.map((subscription) => (
             <TouchableOpacity
