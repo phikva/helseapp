@@ -8,6 +8,7 @@ import RecipeFilters from './RecipeFilters';
 import { useContentStore } from '../../lib/store/contentStore';
 import { useAuthStore } from '../../lib/store/authStore';
 import { removeRecipe } from '../../lib/services/savedRecipesService';
+import { getRecipeImageSource } from '../../lib/imageUtils';
 
 interface FilterValues {
   searchTerm: string;
@@ -392,27 +393,32 @@ const FavoriteRecipes = () => {
         filters.carbs.max < maxValues.carbs || 
         filters.fat.min > 0 || 
         filters.fat.max < maxValues.fat) && (
-        <TouchableOpacity 
-          onPress={() => {
-            // Reset filters in parent component
-            setFilters({
-              searchTerm: '',
-              selectedCategories: [],
-              calories: { min: 0, max: maxValues.calories },
-              protein: { min: 0, max: maxValues.protein },
-              carbs: { min: 0, max: maxValues.carbs },
-              fat: { min: 0, max: maxValues.fat }
-            });
-            
-            // Call resetFilters directly on the RecipeFilters component
-            if (recipeFiltersRef.current) {
-              recipeFiltersRef.current.resetFilters();
-            }
-          }}
-          className="bg-gray-200 rounded-lg px-3 py-1 mx-4 mb-2"
-        >
-          <Text className="text-gray-600">Tilbakestill filtre</Text>
-        </TouchableOpacity>
+        <View className="flex-row justify-between items-center px-4 mb-2">
+          <Text className="text-text-secondary">
+            Viser {filteredFavorites.length} av {favoriteRecipes.length} favoritter
+          </Text>
+          <TouchableOpacity 
+            onPress={() => {
+              // Reset filters in parent component
+              setFilters({
+                searchTerm: '',
+                selectedCategories: [],
+                calories: { min: 0, max: maxValues.calories },
+                protein: { min: 0, max: maxValues.protein },
+                carbs: { min: 0, max: maxValues.carbs },
+                fat: { min: 0, max: maxValues.fat }
+              });
+              
+              // Call resetFilters directly on the RecipeFilters component
+              if (recipeFiltersRef.current) {
+                recipeFiltersRef.current.resetFilters();
+              }
+            }}
+            className="bg-gray-200 rounded-lg px-3 py-1"
+          >
+            <Text className="text-gray-600">Tilbakestill filtre</Text>
+          </TouchableOpacity>
+        </View>
       )}
       
       {/* Recipe list */}
@@ -446,7 +452,7 @@ const FavoriteRecipes = () => {
                 >
                   <View className="relative">
                     <Image
-                      source={{ uri: recipe.image ? urlFor(recipe.image).width(400).height(200).url() : 'https://via.placeholder.com/400x200.png?text=No+Image' }}
+                      source={getRecipeImageSource(recipe.image, 400, 200, recipe._id)}
                       className="w-full h-48"
                       resizeMode="cover"
                     />

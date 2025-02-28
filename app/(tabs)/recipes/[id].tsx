@@ -6,6 +6,7 @@ import { getRecipeByIdQuery } from '@/lib/queries/recipeQueries';
 import RecipeSkeleton from '../../components/skeleton/RecipeSkeleton';
 import { BackButton } from '../../../components/ui/BackButton';
 import { colors } from '../../../lib/theme';
+import { getRecipeImageSource } from '../../../lib/imageUtils';
 
 interface Recipe {
   _id: string;
@@ -125,7 +126,7 @@ export default function RecipeScreen() {
       
       <ScrollView showsVerticalScrollIndicator={false}>
         <Image
-          source={{ uri: urlFor(recipe.image).width(400).height(250).url() }}
+          source={getRecipeImageSource(recipe.image, 400, 250, recipe._id)}
           className="w-full h-56"
           resizeMode="cover"
         />

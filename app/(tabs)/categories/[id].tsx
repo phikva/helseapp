@@ -8,6 +8,7 @@ import { BackButton } from '../../../components/ui/BackButton';
 import { colors } from '../../../lib/theme';
 import RecipeFilters from '../../components/RecipeFilters';
 import { useContentStore } from '../../../lib/store/contentStore';
+import { getRecipeImageSource } from '../../../lib/imageUtils';
 
 interface Recipe {
   _id: string;
@@ -83,7 +84,7 @@ const RecipeCard = ({ recipe, onPress, colorClass }: { recipe: Recipe; onPress: 
     className={`h-64 w-80 ${colorClass} rounded-2xl mr-4 overflow-hidden shadow-sm`}
   >
     <Image
-      source={{ uri: urlFor(recipe.image).width(320).height(200).url() }}
+      source={getRecipeImageSource(recipe.image, 320, 200, recipe._id)}
       className="w-full h-40"
       resizeMode="cover"
     />
@@ -257,7 +258,7 @@ export default function CategoryScreen() {
         }}
       >
         <Image
-          source={{ uri: urlFor(recipe.image).width(400).height(200).url() }}
+          source={getRecipeImageSource(recipe.image, 400, 200, recipe._id)}
           className="w-full h-48"
           resizeMode="cover"
         />

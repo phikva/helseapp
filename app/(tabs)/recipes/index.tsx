@@ -10,6 +10,7 @@ import FavoriteRecipes from '../../components/FavoriteRecipes';
 import { useAuthStore } from '../../../lib/store/authStore';
 import { useSavedRecipesStore } from '../../../lib/store/savedRecipesStore';
 import { saveRecipe, removeRecipe } from '../../../lib/services/savedRecipesService';
+import { getRecipeImageSource } from '../../../lib/imageUtils';
 
 interface Recipe {
   _id: string;
@@ -371,7 +372,7 @@ export default function RecipesScreen() {
           }}
         >
           <Text className={`${activeTab === 'all' ? 'text-primary-green font-medium' : 'text-gray-600'}`}>
-            Alle oppskrifter
+            Alle oppskrifter {recipes ? `(${recipes.length})` : ''}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -392,7 +393,7 @@ export default function RecipesScreen() {
           }}
         >
           <Text className={`${activeTab === 'favorites' ? 'text-primary-green font-medium' : 'text-gray-600'}`}>
-            Favoritter
+            Favoritter {favoriteRecipes ? `(${favoriteRecipes.length})` : ''}
           </Text>
         </TouchableOpacity>
       </View>
@@ -420,27 +421,32 @@ export default function RecipesScreen() {
             filters.carbs.max < maxValues.carbs || 
             filters.fat.min > 0 || 
             filters.fat.max < maxValues.fat) && (
-            <TouchableOpacity 
-              onPress={() => {
-                // Reset filters in parent component
-                setFilters({
-                  searchTerm: '',
-                  selectedCategories: [],
-                  calories: { min: 0, max: maxValues.calories },
-                  protein: { min: 0, max: maxValues.protein },
-                  carbs: { min: 0, max: maxValues.carbs },
-                  fat: { min: 0, max: maxValues.fat }
-                });
-                
-                // Call resetFilters directly on the RecipeFilters component
-                if (recipeFiltersRef.current) {
-                  recipeFiltersRef.current.resetFilters();
-                }
-              }}
-              className="bg-gray-200 rounded-lg px-3 py-1"
-            >
-              <Text className="text-gray-600">Tilbakestill filtre</Text>
-            </TouchableOpacity>
+            <View className="flex-row justify-between items-center px-4 mb-2">
+              <Text className="text-text-secondary">
+                Viser {filteredRecipes.length} av {recipes.length} oppskrifter
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  // Reset filters in parent component
+                  setFilters({
+                    searchTerm: '',
+                    selectedCategories: [],
+                    calories: { min: 0, max: maxValues.calories },
+                    protein: { min: 0, max: maxValues.protein },
+                    carbs: { min: 0, max: maxValues.carbs },
+                    fat: { min: 0, max: maxValues.fat }
+                  });
+                  
+                  // Call resetFilters directly on the RecipeFilters component
+                  if (recipeFiltersRef.current) {
+                    recipeFiltersRef.current.resetFilters();
+                  }
+                }}
+                className="bg-gray-200 rounded-lg px-3 py-1"
+              >
+                <Text className="text-gray-600">Tilbakestill filtre</Text>
+              </TouchableOpacity>
+            </View>
           )}
           
           {/* Recipe list */}
@@ -473,7 +479,7 @@ export default function RecipesScreen() {
                       >
                         <View className="relative">
                           <Image
-                            source={{ uri: recipe.image ? urlFor(recipe.image).width(400).height(200).url() : 'https://via.placeholder.com/400x200.png?text=No+Image' }}
+                            source={getRecipeImageSource(recipe.image, 400, 200, recipe._id)}
                             className="w-full h-48"
                             resizeMode="cover"
                           />
