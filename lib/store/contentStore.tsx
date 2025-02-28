@@ -33,6 +33,7 @@ interface ContentContextState {
   lastFetched: number | null;
   refreshContent: () => Promise<void>;
   isCacheStale: () => boolean;
+  getRecipeColor: (recipeId: string) => string;
 }
 
 // Context
@@ -125,6 +126,23 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     refreshContent();
   }, []);
 
+  // Add this function to generate a consistent color for each recipe
+  const getRecipeColor = (recipeId: string): string => {
+    // Array of available color names
+    const colors = ['green', 'cyan', 'purple', 'pink', 'blue'];
+    
+    // Use the recipe ID to deterministically select a color
+    // This ensures the same recipe always gets the same color
+    let hash = 0;
+    for (let i = 0; i < recipeId.length; i++) {
+      hash = recipeId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Get a positive index within the colors array range
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
   const contextValue: ContentContextState = {
     recipes,
     categories,
@@ -133,6 +151,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
     lastFetched,
     refreshContent,
     isCacheStale,
+    getRecipeColor
   };
 
   return (

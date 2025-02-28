@@ -8,10 +8,11 @@ import 'react-native-reanimated';
 import { useColorScheme, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useInitAuth } from '@hooks/useInitAuth';
+import { useInitAuth } from '../hooks/useInitAuth';
 import { ToastProvider } from './components/ui/Toast';
 import { ProfileProvider } from '../lib/store/profileStore';
 import { ContentProvider } from '../lib/store/contentStore';
+import { SavedRecipesProvider } from '../lib/store/savedRecipesStore';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -98,17 +99,19 @@ export default function RootLayout() {
           <ToastProvider>
             <ProfileProvider>
               <ContentProvider>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: '#fff' },
-                  }}
-                >
-                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
-                </Stack>
-                <StatusBar style="dark" />
+                <SavedRecipesProvider>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: '#fff' },
+                    }}
+                  >
+                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
+                  </Stack>
+                  <StatusBar style="dark" />
+                </SavedRecipesProvider>
               </ContentProvider>
             </ProfileProvider>
           </ToastProvider>

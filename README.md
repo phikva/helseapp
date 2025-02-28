@@ -48,3 +48,25 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Recent Updates
+
+### Search and Filter Functionality in Favorites Tab
+
+We've added search and filter functionality to the Favorites tab, allowing users to:
+
+1. **Search by Recipe Name**: Filter favorite recipes by typing in the search box
+2. **Filter by Categories**: Select specific food categories to narrow down results
+3. **Filter by Nutritional Values**: Use sliders to filter recipes based on:
+   - Calories
+   - Protein
+   - Carbohydrates
+   - Fat
+
+The implementation ensures a consistent user experience between the main Recipes tab and the Favorites tab, with the same filtering capabilities available in both sections.
+
+Key improvements:
+- Dynamic calculation of max nutritional values based on the user's favorite recipes
+- Responsive UI that updates as filters are applied
+- Clear visual feedback when no recipes match the current filters
+- Easy reset of all filters with a single button

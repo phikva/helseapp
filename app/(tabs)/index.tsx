@@ -34,7 +34,7 @@ const bgColors = [
   'bg-primary-purple',
   'bg-primary-pink',
   'bg-primary-blue',
-  'bg-primary-black',
+
 ];
 
 // Helper function to shuffle an array

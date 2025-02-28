@@ -113,7 +113,8 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
 
   // Expose resetFilters function via ref
   useImperativeHandle(ref, () => ({
-    resetFilters
+    resetFilters,
+    open: openDrawer
   }));
 
   const toggleCategorySelection = (categoryId: string) => {

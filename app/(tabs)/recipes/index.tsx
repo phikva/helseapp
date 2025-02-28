@@ -1,11 +1,15 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { urlFor } from '@/lib/sanity';
+import { urlFor } from '../../../lib/sanity';
 import RecipeListSkeleton from '../../components/skeleton/RecipeListSkeleton';
 import RecipeFilters from '../../components/RecipeFilters';
 import { Ionicons } from '@expo/vector-icons';
 import { useContentStore } from '../../../lib/store/contentStore';
+import FavoriteRecipes from '../../components/FavoriteRecipes';
+import { useAuthStore } from '../../../lib/store/authStore';
+import { useSavedRecipesStore } from '../../../lib/store/savedRecipesStore';
+import { saveRecipe, removeRecipe } from '../../../lib/services/savedRecipesService';
 
 interface Recipe {
   _id: string;
@@ -21,6 +25,7 @@ interface Recipe {
     karbs: number;
     fett: number;
   };
+  tilberedningstid?: string;
 }
 
 interface FilterValues {
@@ -32,35 +37,16 @@ interface FilterValues {
   fat: { min: number; max: number };
 }
 
-// Array of Tailwind background color classes to cycle through
-const bgColors = [
-  'bg-primary-green',
-  'bg-primary-cyan',
-  'bg-primary-purple',
-  'bg-primary-pink',
-  'bg-primary-blue',
-  'bg-primary-black',
-];
-
-// Helper function to shuffle an array
-const shuffleArray = (array: any[]) => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
-
 export default function RecipesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all');
   const router = useRouter();
-  const { recipes, categories, isLoading: contentLoading, error: contentError, refreshContent, isCacheStale } = useContentStore();
+  const { recipes, categories, isLoading: contentLoading, error: contentError, refreshContent, isCacheStale: isContentCacheStale, getRecipeColor } = useContentStore();
   const recipeFiltersRef = useRef<any>(null);
-  
-  // Generate shuffled colors array
-  const shuffledColors = useMemo(() => shuffleArray(bgColors), []);
+  const { session } = useAuthStore();
+  const { savedRecipes, favoriteRecipes, refreshSavedRecipes, refreshFavoriteRecipes, isCacheStale } = useSavedRecipesStore();
+  const [savingRecipeId, setSavingRecipeId] = useState<string | null>(null);
   
   // Filter state
   const [filters, setFilters] = useState<FilterValues>({
@@ -85,7 +71,7 @@ export default function RecipesScreen() {
       setLoading(true);
       
       // Check if cache is stale and refresh if needed
-      if (isCacheStale()) {
+      if (isContentCacheStale()) {
         await refreshContent();
       }
       
@@ -143,7 +129,7 @@ export default function RecipesScreen() {
     };
     
     loadRecipes();
-  }, [recipes, isCacheStale, refreshContent]);
+  }, [recipes, isContentCacheStale, refreshContent]);
 
   const handleFilterChange = (newFilters: FilterValues) => {
     console.log('Filter changed:', JSON.stringify(newFilters.selectedCategories));
@@ -237,9 +223,88 @@ export default function RecipesScreen() {
     });
   }, [recipes, filters]);
 
-  // Helper function to get color for an index
-  const getColorForIndex = (index: number) => {
-    return shuffledColors[index % shuffledColors.length];
+  // Helper function to get color for a recipe
+  const getColorForRecipe = (recipeId: string) => {
+    const colorName = getRecipeColor(recipeId);
+    return `bg-primary-${colorName}`;
+  };
+
+  // Check if a recipe is saved as favorite
+  const isRecipeFavorite = (recipeId: string) => {
+    const savedRecipe = savedRecipes.find(sr => sr.recipe_id === recipeId);
+    return savedRecipe?.is_favorite || false;
+  };
+
+  // Toggle favorite status
+  const toggleFavorite = async (recipeId: string, event?: any) => {
+    // Prevent the card click event from triggering
+    if (event) {
+      event.stopPropagation();
+    }
+    
+    if (!session?.user) {
+      Alert.alert(
+        'Logg inn',
+        'Du må være logget inn for å lagre oppskrifter',
+        [
+          { text: 'Avbryt', style: 'cancel' },
+          { text: 'Logg inn', onPress: () => router.push('/(auth)/sign-in') }
+        ]
+      );
+      return;
+    }
+    
+    setSavingRecipeId(recipeId);
+    
+    // Check current favorite status
+    const currentlyFavorite = isRecipeFavorite(recipeId);
+    
+    try {
+      // Toggle the favorite status (true to add, false to remove)
+      if (currentlyFavorite) {
+        await removeRecipe(session.user.id, recipeId);
+      } else {
+        await saveRecipe(session.user.id, recipeId, true);
+      }
+      
+      // Refresh both lists to ensure consistency across the app
+      refreshSavedRecipes();
+      refreshFavoriteRecipes();
+      
+      Alert.alert(
+        currentlyFavorite ? 'Fjernet fra favoritter' : 'Lagt til i favoritter',
+        currentlyFavorite ? 'Oppskriften er fjernet fra favorittene dine' : 'Oppskriften er lagt til i favorittene dine'
+      );
+    } catch (error: any) {
+      console.error('Error saving recipe:', error);
+      
+      // Handle specific error messages
+      let errorMessage = 'Det oppstod en feil ved lagring av oppskriften';
+      
+      if (error.message) {
+        if (error.message.includes('session has expired') || 
+            error.message.includes('No active session') ||
+            error.message.includes('User ID mismatch')) {
+          errorMessage = error.message;
+          // Redirect to login if session issues
+          Alert.alert(
+            'Sesjonsfeil',
+            errorMessage,
+            [
+              { text: 'Avbryt', style: 'cancel' },
+              { text: 'Logg inn', onPress: () => router.push('/(auth)/sign-in') }
+            ]
+          );
+          return;
+        } else if (error.code === '42501') {
+          errorMessage = 'Du har ikke tillatelse til å lagre denne oppskriften. Vennligst logg inn på nytt.';
+        }
+      }
+      
+      Alert.alert('Feil', errorMessage);
+    } finally {
+      setSavingRecipeId(null);
+    }
   };
 
   if (loading || contentLoading) {
@@ -293,115 +358,182 @@ export default function RecipesScreen() {
         }} 
       />
       
-      <View className="px-4">
-        <RecipeFilters 
-          onFilterChange={handleFilterChange}
-          maxValues={maxValues}
-          ref={recipeFiltersRef}
-        />
-      </View>
-      
-      <View className="px-4 mt-2 flex-row justify-between items-center">
-        <Text className="body-regular text-text-secondary">
-          {filteredRecipes?.length || 0} {(filteredRecipes?.length || 0) === 1 ? 'oppskrift' : 'oppskrifter'} funnet
-        </Text>
-        
-        {/* Show reset all button if any filter is active */}
-        {(filters.searchTerm || filters.selectedCategories.length > 0 || 
-          filters.calories.max < maxValues.calories || 
-          filters.protein.max < maxValues.protein || 
-          filters.carbs.max < maxValues.carbs || 
-          filters.fat.max < maxValues.fat) && (
-          <TouchableOpacity 
-            onPress={() => {
-              // Reset filters in parent component
-              setFilters({
-                searchTerm: '',
-                selectedCategories: [],
-                calories: { min: 0, max: maxValues.calories },
-                protein: { min: 0, max: maxValues.protein },
-                carbs: { min: 0, max: maxValues.carbs },
-                fat: { min: 0, max: maxValues.fat }
+      {/* Tab navigation */}
+      <View className="flex-row border-b border-gray-200 mx-4 mb-2">
+        <TouchableOpacity 
+          className={`py-2 px-4 ${activeTab === 'all' ? 'border-b-2 border-primary-green' : ''}`}
+          onPress={() => {
+            setActiveTab('all');
+            // Refresh saved recipes to ensure we have the latest state
+            if (isCacheStale()) {
+              refreshSavedRecipes();
+            }
+          }}
+        >
+          <Text className={`${activeTab === 'all' ? 'text-primary-green font-medium' : 'text-gray-600'}`}>
+            Alle oppskrifter
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          className={`py-2 px-4 ${activeTab === 'favorites' ? 'border-b-2 border-primary-green' : ''}`}
+          onPress={() => {
+            // First set the active tab to show the component immediately
+            setActiveTab('favorites');
+            
+            // Then check if we need to refresh data
+            if (isCacheStale()) {
+              console.log("Cache is stale, refreshing favorite recipes data");
+              refreshFavoriteRecipes().catch(err => {
+                console.error("Error refreshing favorites:", err);
               });
-              
-              // Call resetFilters directly on the RecipeFilters component
-              if (recipeFiltersRef.current) {
-                recipeFiltersRef.current.resetFilters();
-              }
-            }}
-            className="bg-gray-200 rounded-lg px-3 py-1"
-          >
-            <Text className="text-text-secondary">Nullstill alle</Text>
-          </TouchableOpacity>
-        )}
+            } else {
+              console.log("Using cached favorites data");
+            }
+          }}
+        >
+          <Text className={`${activeTab === 'favorites' ? 'text-primary-green font-medium' : 'text-gray-600'}`}>
+            Favoritter
+          </Text>
+        </TouchableOpacity>
       </View>
       
-      <ScrollView className="flex-1 mt-2" showsVerticalScrollIndicator={false}>
-        <View className="px-4 pt-2">
-          {!filteredRecipes || filteredRecipes.length === 0 ? (
-            <View className="items-center justify-center py-10">
-              <Ionicons name="search-outline" size={48} color="#3C3C43" />
-              <Text className="text-text-secondary text-center mt-4 text-lg">Ingen oppskrifter funnet</Text>
-              <Text className="text-text-secondary text-center mt-1">Prøv å justere filtrene dine</Text>
-            </View>
-          ) : (
-            <View className="space-y-4">
-              {filteredRecipes.map((recipe, index) => {
-                const bgColorClass = getColorForIndex(index);
-                // Extract just the color name without the 'bg-primary-' prefix
-                const colorName = bgColorClass.replace('bg-primary-', '');
+      {/* Content based on active tab */}
+      {activeTab === 'all' ? (
+        <>
+          {/* Filter section */}
+          <View className="px-4 mb-4">
+            <RecipeFilters 
+              onFilterChange={handleFilterChange}
+              maxValues={maxValues}
+              ref={recipeFiltersRef}
+            />
+          </View>
+          
+          {/* Active filters display */}
+          {(filters.searchTerm || 
+            filters.selectedCategories.length > 0 || 
+            filters.calories.min > 0 || 
+            filters.calories.max < maxValues.calories || 
+            filters.protein.min > 0 || 
+            filters.protein.max < maxValues.protein || 
+            filters.carbs.min > 0 || 
+            filters.carbs.max < maxValues.carbs || 
+            filters.fat.min > 0 || 
+            filters.fat.max < maxValues.fat) && (
+            <TouchableOpacity 
+              onPress={() => {
+                // Reset filters in parent component
+                setFilters({
+                  searchTerm: '',
+                  selectedCategories: [],
+                  calories: { min: 0, max: maxValues.calories },
+                  protein: { min: 0, max: maxValues.protein },
+                  carbs: { min: 0, max: maxValues.carbs },
+                  fat: { min: 0, max: maxValues.fat }
+                });
                 
-                return (
-                  <TouchableOpacity
-                    key={recipe._id}
-                    className={`${bgColorClass} rounded-2xl shadow-sm overflow-hidden`}
-                    onPress={() => {
-                      router.push({
-                        pathname: '/recipes/[id]',
-                        params: { id: recipe._id, color: colorName }
-                      });
-                    }}
-                  >
-                    <Image
-                      source={{ uri: recipe.image ? urlFor(recipe.image).width(400).height(200).url() : 'https://via.placeholder.com/400x200.png?text=No+Image' }}
-                      className="w-full h-48"
-                      resizeMode="cover"
-                    />
-                    <View className="p-4">
-                      <Text className="font-heading-serif text-xl mb-2 text-text-white">{recipe.tittel}</Text>
-                      
-                      {/* Categories */}
-                      <View className="flex-row flex-wrap gap-2 mb-2">
-                        {(recipe.kategorier || []).map((kategori) => (
-                          <TouchableOpacity
-                            key={kategori._id}
-                            onPress={() => {
-                              router.push({
-                                pathname: '/categories/[id]',
-                                params: { id: kategori._id }
-                              });
-                            }}
-                            className="bg-white/20 px-2 py-1 rounded-full"
-                          >
-                            <Text className="text-sm text-white">{kategori.name}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-
-                      <Text className="text-text-white">Kalorier: {recipe.totalKcal || 0} kcal</Text>
-                      <View className="flex-row justify-between mt-2">
-                        <Text className="text-text-white">Protein: {recipe.totalMakros?.protein || 0}g</Text>
-                        <Text className="text-text-white">Karbohydrater: {recipe.totalMakros?.karbs || 0}g</Text>
-                        <Text className="text-text-white">Fett: {recipe.totalMakros?.fett || 0}g</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                // Call resetFilters directly on the RecipeFilters component
+                if (recipeFiltersRef.current) {
+                  recipeFiltersRef.current.resetFilters();
+                }
+              }}
+              className="bg-gray-200 rounded-lg px-3 py-1"
+            >
+              <Text className="text-gray-600">Tilbakestill filtre</Text>
+            </TouchableOpacity>
           )}
-        </View>
-      </ScrollView>
+          
+          {/* Recipe list */}
+          <ScrollView className="flex-1">
+            <View className="px-4 pt-2">
+              {!filteredRecipes || filteredRecipes.length === 0 ? (
+                <View className="items-center justify-center py-10">
+                  <Ionicons name="search-outline" size={48} color="#3C3C43" />
+                  <Text className="text-text-secondary text-center mt-4 text-lg">Ingen oppskrifter funnet</Text>
+                  <Text className="text-text-secondary text-center mt-1">Prøv å justere filtrene dine</Text>
+                </View>
+              ) : (
+                <View className="space-y-4">
+                  {filteredRecipes.map((recipe, index) => {
+                    const bgColorClass = getColorForRecipe(recipe._id);
+                    // Extract just the color name without the 'bg-primary-' prefix
+                    const colorName = bgColorClass.replace('bg-primary-', '');
+                    const isFavorite = isRecipeFavorite(recipe._id);
+                    
+                    return (
+                      <TouchableOpacity
+                        key={recipe._id}
+                        className={`${bgColorClass} rounded-2xl shadow-sm overflow-hidden`}
+                        onPress={() => {
+                          router.push({
+                            pathname: '/recipes/[id]',
+                            params: { id: recipe._id, color: colorName }
+                          });
+                        }}
+                      >
+                        <View className="relative">
+                          <Image
+                            source={{ uri: recipe.image ? urlFor(recipe.image).width(400).height(200).url() : 'https://via.placeholder.com/400x200.png?text=No+Image' }}
+                            className="w-full h-48"
+                            resizeMode="cover"
+                          />
+                          
+                          {/* Favorite button */}
+                          <View className="absolute bottom-2 right-2">
+                            <TouchableOpacity
+                              onPress={(e) => toggleFavorite(recipe._id, e)}
+                              disabled={savingRecipeId === recipe._id}
+                              className="bg-white rounded-full p-2 shadow"
+                            >
+                              <Ionicons 
+                                name={isFavorite ? "heart" : "heart-outline"} 
+                                size={24} 
+                                color={isFavorite ? "#FF6B6B" : "#666"} 
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        
+                        <View className="p-4">
+                          <Text className="font-heading-serif text-xl mb-2 text-text-white">{recipe.tittel}</Text>
+                          
+                          {/* Categories */}
+                          <View className="flex-row flex-wrap gap-2 mb-2">
+                            {(recipe.kategorier || []).map((kategori) => (
+                              <TouchableOpacity
+                                key={kategori._id}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  router.push({
+                                    pathname: '/categories/[id]',
+                                    params: { id: kategori._id }
+                                  });
+                                }}
+                                className="bg-white/20 px-2 py-1 rounded-full"
+                              >
+                                <Text className="text-sm text-white">{kategori.name}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+
+                          <Text className="text-text-white">Kalorier: {recipe.totalKcal || 0} kcal</Text>
+                          <View className="flex-row justify-between mt-2">
+                            <Text className="text-text-white">Protein: {recipe.totalMakros?.protein || 0}g</Text>
+                            <Text className="text-text-white">Karbohydrater: {recipe.totalMakros?.karbs || 0}g</Text>
+                            <Text className="text-text-white">Fett: {recipe.totalMakros?.fett || 0}g</Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </>
+      ) : (
+        <FavoriteRecipes />
+      )}
     </SafeAreaView>
   );
-} 
+}
