@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Animated, Dimensions, StyleSheet, PanResponder } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Animated, Dimensions, StyleSheet, PanResponder, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { colors } from '../../lib/theme';
@@ -82,7 +82,6 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
   ).current;
 
   useEffect(() => {
-    console.log('Selected categories in RecipeFilters:', selectedCategories);
     // Update parent component with filter values
     onFilterChange({
       searchTerm,
@@ -118,37 +117,15 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
   }));
 
   const toggleCategorySelection = (categoryId: string) => {
-    console.log('Toggling category:', categoryId);
-    console.log('Current selected categories:', selectedCategories);
-    
-    // Find the category name for logging
-    const categoryName = categories.find(cat => cat._id === categoryId)?.name || 'Unknown';
-    
     let newCategories;
     
     if (selectedCategories.includes(categoryId)) {
-      console.log(`Removing category: ${categoryName} (${categoryId})`);
       newCategories = selectedCategories.filter(id => id !== categoryId);
     } else {
-      console.log(`Adding category: ${categoryName} (${categoryId})`);
       newCategories = [...selectedCategories, categoryId];
     }
     
-    console.log('New selected categories:', newCategories);
     setSelectedCategories(newCategories);
-    
-    // Immediately update parent component with new categories
-    const updatedFilters = {
-      searchTerm,
-      selectedCategories: newCategories,
-      calories: { min: 0, max: caloriesValue > 0 ? caloriesValue : maxValues.calories },
-      protein: { min: 0, max: proteinValue > 0 ? proteinValue : maxValues.protein },
-      carbs: { min: 0, max: carbsValue > 0 ? carbsValue : maxValues.carbs },
-      fat: { min: 0, max: fatValue > 0 ? fatValue : maxValues.fat }
-    };
-    
-    console.log('Sending updated filters to parent:', updatedFilters);
-    onFilterChange(updatedFilters);
   };
 
   const resetFilters = () => {
@@ -230,6 +207,41 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
       </View>
     </View>
   );
+
+  // Render the category list when dropdown is open
+  const renderCategoryList = () => {
+    if (!isCategoryDropdownOpen) return null;
+    
+    return (
+      <View className="bg-white rounded-lg p-3 mb-4">
+        <FlatList 
+          data={(categories || []).map(category => ({
+            ...category,
+            isSelected: selectedCategories.includes(category._id)
+          }))}
+          keyExtractor={item => item._id}
+          renderItem={({ item: category }) => (
+            <TouchableOpacity
+              className="flex-row items-center py-2"
+              onPress={() => toggleCategorySelection(category._id)}
+            >
+              <View className={`w-5 h-5 rounded border ${category.isSelected ? 'bg-primary-green border-primary-green' : 'border-gray-300'} mr-2 items-center justify-center`}>
+                {category.isSelected && (
+                  <Ionicons name="checkmark" size={16} color="white" />
+                )}
+              </View>
+              <Text>{category.name}</Text>
+            </TouchableOpacity>
+          )}
+          style={{ maxHeight: 300 }}
+          showsVerticalScrollIndicator={true}
+          initialNumToRender={20}
+          maxToRenderPerBatch={20}
+          windowSize={10}
+        />
+      </View>
+    );
+  };
 
   return (
     <View className="mb-0">
@@ -330,57 +342,43 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
               {/* Categories section - only show if not hidden */}
               {!hideCategoryFilter && (
                 <View className="mb-6">
-                  <Text className="font-medium mb-2">Kategorier</Text>
-                  
-                  {/* Category dropdown */}
-                  <TouchableOpacity 
-                    className="flex-row justify-between items-center bg-white rounded-lg px-3 py-2 mb-2"
+                  <TouchableOpacity
+                    className="flex-row justify-between items-center bg-white p-3 rounded-lg"
                     onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                   >
-                    <Text>{selectedCategories.length > 0 ? `${selectedCategories.length} kategorier valgt` : 'Velg kategorier'}</Text>
-                    <Ionicons 
-                      name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"} 
-                      size={20} 
-                      color={colors.text.secondary} 
+                    <Text className="text-text-primary">
+                      {selectedCategories.length > 0
+                        ? `${selectedCategories.length} kategorier valgt`
+                        : 'Velg kategorier'}
+                    </Text>
+                    <Ionicons
+                      name={isCategoryDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.textPrimary}
                     />
                   </TouchableOpacity>
 
-                  {isCategoryDropdownOpen && (
-                    <View className="bg-white rounded-lg p-3 mb-4">
-                      <ScrollView style={{ maxHeight: 150 }}>
-                        {(categories || []).map(category => (
-                          <TouchableOpacity
-                            key={category._id}
-                            className="flex-row items-center py-2"
-                            onPress={() => toggleCategorySelection(category._id)}
-                          >
-                            <View className={`w-5 h-5 rounded border ${selectedCategories.includes(category._id) ? 'bg-primary-green border-primary-green' : 'border-gray-300'} mr-2 items-center justify-center`}>
-                              {selectedCategories.includes(category._id) && (
-                                <Ionicons name="checkmark" size={16} color="white" />
-                              )}
-                            </View>
-                            <Text>{category.name}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
+                  {/* Render category list separately */}
+                  {renderCategoryList()}
                 </View>
               )}
               
-              <Text className="text-text-secondary mb-4">Dra glidebryterne for å filtrere oppskrifter basert på næringsinnhold.</Text>
-              
-              {/* Calories slider */}
-              {renderSingleSlider('Kalorier', caloriesValue, maxValues.calories, setCaloriesValue, ' kcal')}
-              
-              {/* Protein slider */}
-              {renderSingleSlider('Protein', proteinValue, maxValues.protein, setProteinValue)}
-              
-              {/* Carbs slider */}
-              {renderSingleSlider('Karbohydrater', carbsValue, maxValues.carbs, setCarbsValue)}
-              
-              {/* Fat slider */}
-              {renderSingleSlider('Fett', fatValue, maxValues.fat, setFatValue)}
+              {/* Nutrition section */}
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text className="text-text-secondary mb-4">Dra glidebryterne for å filtrere oppskrifter basert på næringsinnhold.</Text>
+                
+                {/* Calories slider */}
+                {renderSingleSlider('Kalorier', caloriesValue, maxValues.calories, setCaloriesValue, ' kcal')}
+                
+                {/* Protein slider */}
+                {renderSingleSlider('Protein', proteinValue, maxValues.protein, setProteinValue)}
+                
+                {/* Carbs slider */}
+                {renderSingleSlider('Karbohydrater', carbsValue, maxValues.carbs, setCarbsValue)}
+                
+                {/* Fat slider */}
+                {renderSingleSlider('Fett', fatValue, maxValues.fat, setFatValue)}
+              </ScrollView>
 
               {/* Action buttons */}
               <View className="flex-row justify-between mt-6 mb-10">

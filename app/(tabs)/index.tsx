@@ -8,6 +8,7 @@ import { client, urlFor } from '@/lib/sanity';
 import { useRouter } from 'expo-router';
 import HomeScreenSkeleton from '../components/skeleton/HomeScreenSkeleton'
 import { useContentStore } from '../../lib/store/contentStore';
+import { getRecipeImageSource } from '../../lib/imageUtils';
 
 interface Recipe {
   _id: string;
@@ -67,7 +68,7 @@ const RecipeCard = ({ recipe, onPress, colorClass }: { recipe: Recipe; onPress: 
       className={`h-40 w-64 ${colorClass} rounded-2xl mr-4 overflow-hidden shadow-sm`}
     >
       <Image
-        source={{ uri: recipe.image ? urlFor(recipe.image).width(256).height(120).url() : 'https://via.placeholder.com/256x120.png?text=No+Image' }}
+        source={getRecipeImageSource(recipe.image, 256, 120, recipe._id)}
         className="w-full h-24"
         resizeMode="cover"
       />
@@ -92,7 +93,7 @@ const CategoryCard = ({ category, onPress, colorClass }: { category: Category; o
     >
       {category.image && (
         <Image
-          source={{ uri: urlFor(category.image).width(320).height(140).url() }}
+          source={getRecipeImageSource(category.image, 320, 140, category._id)}
           className="w-full h-32"
           resizeMode="cover"
         />
