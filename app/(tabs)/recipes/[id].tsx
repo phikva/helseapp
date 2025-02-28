@@ -140,7 +140,7 @@ export default function RecipeScreen() {
                 key={kategori._id}
                 onPress={() => {
                   router.push({
-                    pathname: '/categories/[id]',
+                    pathname: '/category/[id]',
                     params: { id: kategori._id }
                   });
                 }}

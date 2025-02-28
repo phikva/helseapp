@@ -18,8 +18,9 @@ export const getRecipeByIdQuery = groq`
     _id,
     tittel,
     "image": image.asset->url,
+    beskrivelse,
     "kategorier": kategori[]->{ _id, name },
-    ingrediens[] {
+    "ingrediens": ingrediens[] {
       name,
       measurement {
         unit,
@@ -37,7 +38,8 @@ export const getRecipeByIdQuery = groq`
     instruksjoner,
     notater,
     totalKcal,
-    totalMakros
+    totalMakros,
+    tilberedningstid
   }
 `
 

@@ -110,9 +110,40 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
     }
   }, [maxValues]);
 
-  // Expose resetFilters function via ref
+  // Expose resetFilters function and applyCategoryFilter method via ref
   useImperativeHandle(ref, () => ({
     resetFilters,
+    applyCategoryFilter: (categoryId: string) => {
+      // Check if the category exists
+      const categoryExists = categories.some(cat => cat._id === categoryId);
+      
+      if (categoryExists) {
+        // Set the selected category
+        setSelectedCategories([categoryId]);
+        
+        // Update parent component with the new filter
+        onFilterChange({
+          searchTerm,
+          selectedCategories: [categoryId],
+          calories: { 
+            min: caloriesValue > 0 ? maxValues.calories * (caloriesValue / 100) : 0, 
+            max: maxValues.calories 
+          },
+          protein: { 
+            min: proteinValue > 0 ? maxValues.protein * (proteinValue / 100) : 0, 
+            max: maxValues.protein 
+          },
+          carbs: { 
+            min: carbsValue > 0 ? maxValues.carbs * (carbsValue / 100) : 0, 
+            max: maxValues.carbs 
+          },
+          fat: { 
+            min: fatValue > 0 ? maxValues.fat * (fatValue / 100) : 0, 
+            max: maxValues.fat 
+          }
+        });
+      }
+    },
     open: openDrawer
   }));
 
@@ -279,7 +310,11 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
           <View className="flex-row items-center">
             {selectedCategories.length > 0 && (
               <View className="bg-primary-green/10 rounded-full px-2 py-1 mr-2">
-                <Text className="text-xs text-primary-green">{selectedCategories.length} kategorier</Text>
+                <Text className="text-xs text-primary-green">
+                  {selectedCategories.length === 1 
+                    ? categories.find(cat => cat._id === selectedCategories[0])?.name || '1 kategori'
+                    : `${selectedCategories.length} kategorier`}
+                </Text>
               </View>
             )}
             {caloriesValue > 0 && (
@@ -350,7 +385,13 @@ const RecipeFilters = forwardRef(({ onFilterChange, maxValues, hideCategoryFilte
                     className="flex-row justify-between items-center bg-white rounded-lg px-3 py-2 mb-2"
                     onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                   >
-                    <Text>{selectedCategories.length > 0 ? `${selectedCategories.length} kategorier valgt` : 'Velg kategorier'}</Text>
+                    <Text>
+                      {selectedCategories.length === 0 
+                        ? 'Velg kategorier' 
+                        : selectedCategories.length === 1
+                          ? categories.find(cat => cat._id === selectedCategories[0])?.name || '1 kategori valgt'
+                          : `${selectedCategories.length} kategorier valgt`}
+                    </Text>
                     <Ionicons 
                       name={isCategoryDropdownOpen ? "chevron-up" : "chevron-down"} 
                       size={20} 

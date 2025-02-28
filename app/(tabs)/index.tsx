@@ -175,6 +175,18 @@ export default function HomeScreen() {
     return colorArray[index % colorArray.length];
   };
 
+  // Navigate to recipes tab and open drawer
+  const navigateToRecipeDrawer = (recipeId: string, colorName: string) => {
+    // Navigate to the recipes tab and pass the recipe ID and color as state
+    router.push({
+      pathname: '/(tabs)/recipes',
+      params: { 
+        openRecipe: recipeId,
+        recipeColor: colorName
+      }
+    });
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-primary-light pt-12">
       <TopHeader />
@@ -203,7 +215,13 @@ export default function HomeScreen() {
                   key={category._id}
                   category={category}
                   colorClass={getColorForIndex(index, categoryColors)}
-                  onPress={() => router.push(`/categories/${category._id}`)}
+                  onPress={() => router.push({
+                    pathname: '/(tabs)/recipes',
+                    params: { 
+                      filterCategory: category._id,
+                      categoryName: category.name
+                    }
+                  })}
                 />
               ))}
             </ScrollView>
@@ -232,10 +250,7 @@ export default function HomeScreen() {
                     key={recipe._id}
                     recipe={recipe}
                     colorClass={colorClass}
-                    onPress={() => router.push({
-                      pathname: '/recipes/[id]',
-                      params: { id: recipe._id, color: colorName }
-                    })}
+                    onPress={() => navigateToRecipeDrawer(recipe._id, colorName)}
                   />
                 );
               })}
@@ -265,10 +280,7 @@ export default function HomeScreen() {
                     key={recipe._id}
                     recipe={recipe}
                     colorClass={colorClass}
-                    onPress={() => router.push({
-                      pathname: '/recipes/[id]',
-                      params: { id: recipe._id, color: colorName }
-                    })}
+                    onPress={() => navigateToRecipeDrawer(recipe._id, colorName)}
                   />
                 );
               })}
@@ -297,10 +309,7 @@ export default function HomeScreen() {
                     key={recipe._id}
                     recipe={recipe}
                     colorClass={colorClass}
-                    onPress={() => router.push({
-                      pathname: '/recipes/[id]',
-                      params: { id: recipe._id, color: colorName }
-                    })}
+                    onPress={() => navigateToRecipeDrawer(recipe._id, colorName)}
                   />
                 );
               })}

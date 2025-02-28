@@ -33,7 +33,7 @@ export default function RecipesLayout() {
             headerTitle: '',
             headerLeft: () => (
               <View style={{ marginLeft: 0, paddingBottom: 10 }}>
-                <Text className="font-heading-serif text-4xl text-primary-Black">
+                <Text className="font-heading-serif text-4xl text-primary-Black ">
                   Oppskrifter
                 </Text>
               </View>

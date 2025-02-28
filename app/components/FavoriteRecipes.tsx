@@ -19,7 +19,11 @@ interface FilterValues {
   fat: { min: number; max: number };
 }
 
-const FavoriteRecipes = () => {
+interface FavoriteRecipesProps {
+  onRecipeSelect?: (recipeId: string, colorName: string) => void;
+}
+
+const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
   const router = useRouter();
   const { favoriteRecipes, isLoading, error, refreshFavoriteRecipes, isCacheStale } = useSavedRecipesStore();
   const { recipes, getRecipeColor } = useContentStore();
@@ -301,6 +305,20 @@ const FavoriteRecipes = () => {
     });
   }, [favoriteRecipes, filters]);
 
+  // Handle recipe click
+  const handleRecipeClick = (recipeId: string) => {
+    const colorName = getRecipeColor(recipeId).replace('bg-primary-', '');
+    
+    if (onRecipeSelect) {
+      onRecipeSelect(recipeId, colorName);
+    } else {
+      router.push({
+        pathname: '/recipes/[id]',
+        params: { id: recipeId, color: colorName }
+      });
+    }
+  };
+
   // Handle loading state
   if (localLoading && isLoading) {
     return (
@@ -443,12 +461,7 @@ const FavoriteRecipes = () => {
                 <TouchableOpacity
                   key={savedRecipe.id}
                   className={`${bgColorClass} rounded-2xl shadow-sm overflow-hidden`}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/recipes/[id]',
-                      params: { id: recipe._id, color: colorName }
-                    });
-                  }}
+                  onPress={() => handleRecipeClick(recipe._id)}
                 >
                   <View className="relative">
                     <Image
@@ -483,7 +496,7 @@ const FavoriteRecipes = () => {
                           onPress={(e) => {
                             e.stopPropagation();
                             router.push({
-                              pathname: '/categories/[id]',
+                              pathname: '/category/[id]',
                               params: { id: kategori._id }
                             });
                           }}

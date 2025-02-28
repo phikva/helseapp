@@ -43,11 +43,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="categories"
+        name="Måltidsplanlegger"
         options={{
-          title: 'Kategorier',
-          tabBarIcon: ({ color }) => <Ionicons name="grid" size={26} color={color} />,
-          href: '/categories',
+          title: 'Måltidsplan',
+          tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={26} color={color} />,
+          href: '/mealplanner',
         }}
       />
       <Tabs.Screen

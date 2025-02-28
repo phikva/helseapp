@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { urlFor } from '../../../lib/sanity';
 import RecipeListSkeleton from '../../components/skeleton/RecipeListSkeleton';
 import RecipeFilters from '../../components/RecipeFilters';
@@ -11,6 +11,7 @@ import { useAuthStore } from '../../../lib/store/authStore';
 import { useSavedRecipesStore } from '../../../lib/store/savedRecipesStore';
 import { saveRecipe, removeRecipe } from '../../../lib/services/savedRecipesService';
 import { getRecipeImageSource } from '../../../lib/imageUtils';
+import RecipeDrawer from '../../components/RecipeDrawer';
 
 interface Recipe {
   _id: string;
@@ -48,6 +49,49 @@ export default function RecipesScreen() {
   const { session } = useAuthStore();
   const { savedRecipes, favoriteRecipes, refreshSavedRecipes, refreshFavoriteRecipes, isCacheStale } = useSavedRecipesStore();
   const [savingRecipeId, setSavingRecipeId] = useState<string | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<{ id: string, color: string } | null>(null);
+  
+  // Get URL parameters
+  const params = useLocalSearchParams();
+  const { openRecipe, recipeColor, filterCategory, categoryName } = params;
+  
+  // Open drawer if navigating from home screen with recipe parameters
+  useEffect(() => {
+    if (openRecipe && typeof openRecipe === 'string') {
+      const color = typeof recipeColor === 'string' ? recipeColor : 'green';
+      setSelectedRecipe({ id: openRecipe, color });
+      
+      // Clear the URL parameters to prevent reopening on tab switch
+      router.setParams({});
+    }
+  }, [openRecipe, recipeColor]);
+  
+  // Apply category filter if navigating from recipe drawer
+  useEffect(() => {
+    if (filterCategory && typeof filterCategory === 'string') {
+      // Switch to the "all" tab if not already there
+      setActiveTab('all');
+      
+      // Apply the category filter
+      if (recipeFiltersRef.current) {
+        recipeFiltersRef.current.applyCategoryFilter(filterCategory);
+      } else {
+        // If the ref isn't ready yet, update the filters directly
+        setFilters(prev => ({
+          ...prev,
+          selectedCategories: [filterCategory]
+        }));
+      }
+      
+      // Clear the URL parameters to prevent reapplying on tab switch
+      router.setParams({});
+      
+      // Show a toast or some indication that filters were applied
+      if (categoryName && typeof categoryName === 'string') {
+        console.log(`Filtered by category: ${categoryName}`);
+      }
+    }
+  }, [filterCategory, categoryName]);
   
   // Filter state
   const [filters, setFilters] = useState<FilterValues>({
@@ -403,6 +447,13 @@ export default function RecipesScreen() {
         <>
           {/* Filter section */}
           <View className="px-4 mb-4">
+            {filters.selectedCategories.length === 1 && categories && (
+              <View className="mb-2">
+                <Text className="text-xl font-heading-serif text-primary-green">
+                  {categories.find(cat => cat._id === filters.selectedCategories[0])?.name || 'Kategori'}
+                </Text>
+              </View>
+            )}
             <RecipeFilters 
               onFilterChange={handleFilterChange}
               maxValues={maxValues}
@@ -423,7 +474,10 @@ export default function RecipesScreen() {
             filters.fat.max < maxValues.fat) && (
             <View className="flex-row justify-between items-center px-4 mb-2">
               <Text className="text-text-secondary">
-                Viser {filteredRecipes.length} av {recipes.length} oppskrifter
+                {filters.selectedCategories.length === 1 && categories ? 
+                  `Viser ${filteredRecipes.length} oppskrifter i kategorien "${categories.find(cat => cat._id === filters.selectedCategories[0])?.name || ''}"` :
+                  `Viser ${filteredRecipes.length} av ${recipes.length} oppskrifter`
+                }
               </Text>
               <TouchableOpacity 
                 onPress={() => {
@@ -471,10 +525,7 @@ export default function RecipesScreen() {
                         key={recipe._id}
                         className={`${bgColorClass} rounded-2xl shadow-sm overflow-hidden`}
                         onPress={() => {
-                          router.push({
-                            pathname: '/recipes/[id]',
-                            params: { id: recipe._id, color: colorName }
-                          });
+                          setSelectedRecipe({ id: recipe._id, color: colorName });
                         }}
                       >
                         <View className="relative">
@@ -511,7 +562,7 @@ export default function RecipesScreen() {
                                 onPress={(e) => {
                                   e.stopPropagation();
                                   router.push({
-                                    pathname: '/categories/[id]',
+                                    pathname: '/category/[id]',
                                     params: { id: kategori._id }
                                   });
                                 }}
@@ -538,7 +589,17 @@ export default function RecipesScreen() {
           </ScrollView>
         </>
       ) : (
-        <FavoriteRecipes />
+        <FavoriteRecipes onRecipeSelect={(recipeId, colorName) => setSelectedRecipe({ id: recipeId, color: colorName })} />
+      )}
+      
+      {/* Recipe Drawer */}
+      {selectedRecipe && (
+        <RecipeDrawer
+          recipeId={selectedRecipe.id}
+          colorName={selectedRecipe.color}
+          visible={!!selectedRecipe}
+          onClose={() => setSelectedRecipe(null)}
+        />
       )}
     </SafeAreaView>
   );
