@@ -4,12 +4,12 @@ import { ImageSourcePropType } from 'react-native';
 
 // Import all fallback images statically
 const fallbackImageSources = {
-  'pexels-bulbfish-1143754': require('../assets/images/pexels-bulbfish-1143754.jpg'),
-  'pexels-ella-olsson-572949-1640770': require('../assets/images/pexels-ella-olsson-572949-1640770.jpg'),
-  'pexels-ella-olsson-572949-3026806': require('../assets/images/pexels-ella-olsson-572949-3026806.jpg'),
-  'pexels-helloaesthe-30926470': require('../assets/images/pexels-helloaesthe-30926470.jpg'),
-  'pexels-ionela-mat-268382825-19671313': require('../assets/images/pexels-ionela-mat-268382825-19671313.jpg'),
-  'pexels-janetrangdoan-793759': require('../assets/images/pexels-janetrangdoan-793759.jpg')
+  'pexels-bulbfish-1143754': require('../assets/images/pexels-bulbfish-1143754.webp'),
+  'pexels-ella-olsson-572949-1640770': require('../assets/images/pexels-ella-olsson-572949-1640770.webp'),
+  'pexels-ella-olsson-572949-3026806': require('../assets/images/pexels-ella-olsson-572949-3026806.webp'),
+  'pexels-helloaesthe-30926470': require('../assets/images/pexels-helloaesthe-30926470.webp'),
+  'pexels-ionela-mat-268382825-19671313': require('../assets/images/pexels-ionela-mat-268382825-19671313.webp'),
+  'pexels-janetrangdoan-793759': require('../assets/images/pexels-janetrangdoan-793759.webp')
 };
 
 // Array of fallback image keys for deterministic selection
