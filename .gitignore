@@ -38,3 +38,10 @@ yarn-error.*
 app-example
 
 .env
+
+# Large image files
+assets/images/pexels-bulbfish-1143754.jpg
+assets/images/pexels-ella-olsson-572949-1640770.jpg
+assets/images/pexels-ella-olsson-572949-3026806.jpg
+assets/images/pexels-helloaesthe-30926470.jpg
+assets/images/pexels-ionela-mat-268382825-19671313.jpg
