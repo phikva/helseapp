@@ -37,48 +37,13 @@ export const GENERIC_MEAL_TYPES: MealType[] = [
 
 // Sample data for the meal plan with generic meal types
 export const INITIAL_MEAL_PLAN: MealPlan = {
-  'Mandag': {
-    meal1: null,
-    meal2: null,
-    meal3: null,
-    meal4: null,
-  },
-  'Tirsdag': {
-    meal1: null,
-    meal2: null,
-    meal3: null,
-    meal4: null,
-  },
-  'Onsdag': {
-    meal1: null,
-    meal2: null,
-    meal3: null,
-    meal4: null,
-  },
-  'Torsdag': {
-    meal1: null,
-    meal2: null,
-    meal3: null,
-    meal4: null,
-  },
-  'Fredag': {
-    meal1: null,
-    meal2: null,
-    meal3: null,
-    meal4: null,
-  },
-  'Lørdag': {
-    meal1: null,
-    meal2: null,
-    meal3: null,
-    meal4: null,
-  },
-  'Søndag': {
-    meal1: null,
-    meal2: null,
-    meal3: null,
-    meal4: null,
-  },
+  'Mandag': {},
+  'Tirsdag': {},
+  'Onsdag': {},
+  'Torsdag': {},
+  'Fredag': {},
+  'Lørdag': {},
+  'Søndag': {},
 };
 
 // Sample recipes for demonstration (will be replaced with Sanity data)

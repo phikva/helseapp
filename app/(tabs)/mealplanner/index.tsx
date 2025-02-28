@@ -5,15 +5,18 @@ import { StatusBar } from 'expo-status-bar';
 import { colors, fonts } from '../../../lib/theme';
 import { INITIAL_MEAL_PLAN, SAMPLE_RECIPES, MealPlan, Recipe } from '../../components/mealplanner/types';
 import DayMealPlan from '../../components/mealplanner/DayMealPlan';
-import RecipeSelector from '../../components/mealplanner/RecipeSelector';
+import RecipeSelector from '../../components/shared/RecipeSelector';
 import WeekSelector from '../../components/mealplanner/WeekSelector';
 import Header from '../../components/ui/Header';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMealPlannerStore } from '../../../lib/store/mealPlannerStore';
+import RecipeDrawer from '../../components/RecipeDrawer';
+import { useContentStore } from '../../../lib/store/contentStore';
 
 export default function MealPlannerScreen() {
   const router = useRouter();
+  const { getRecipeColor } = useContentStore();
   
   // Get state from Zustand store
   const { currentWeek: storedWeek, expandedDay: storedExpandedDay, setCurrentWeek, setExpandedDay, saveCurrentState } = useMealPlannerStore();
@@ -33,6 +36,9 @@ export default function MealPlannerScreen() {
     'Lørdag': false,
     'Søndag': false,
   });
+  
+  // Recipe drawer state
+  const [selectedRecipe, setSelectedRecipe] = useState<{ id: string, color: string } | null>(null);
   
   // Initialize expanded days from stored state
   useEffect(() => {
@@ -77,25 +83,14 @@ export default function MealPlannerScreen() {
 
   // Handle removing a meal from the plan
   const removeMeal = (day: string, mealType: string) => {
-    // If the meal has a recipe, just remove the recipe
-    if (mealPlan[day][mealType]) {
-      setMealPlan(prevPlan => ({
-        ...prevPlan,
-        [day]: {
-          ...prevPlan[day],
-          [mealType]: null,
-        }
-      }));
-    } else {
-      // If the meal slot is empty, remove the slot entirely
-      const updatedDayMeals = { ...mealPlan[day] };
-      delete updatedDayMeals[mealType];
-      
-      setMealPlan(prevPlan => ({
-        ...prevPlan,
-        [day]: updatedDayMeals
-      }));
-    }
+    // Always remove the meal slot entirely
+    const updatedDayMeals = { ...mealPlan[day] };
+    delete updatedDayMeals[mealType];
+    
+    setMealPlan(prevPlan => ({
+      ...prevPlan,
+      [day]: updatedDayMeals
+    }));
   };
 
   // Open recipe selector for a specific day and meal type
@@ -136,6 +131,7 @@ export default function MealPlannerScreen() {
     const nextMealNumber = mealNumbers.length > 0 ? Math.max(...mealNumbers) + 1 : 1;
     const newMealId = `meal${nextMealNumber}`;
     
+    // Update meal plan with new slot
     setMealPlan(prevPlan => ({
       ...prevPlan,
       [day]: {
@@ -143,25 +139,30 @@ export default function MealPlannerScreen() {
         [newMealId]: null
       }
     }));
+    
+    // Automatically open recipe selector for the new meal slot
+    setSelectedDay(day);
+    setSelectedMealType(newMealId);
+    setShowRecipeSelector(true);
   };
 
-  // Navigate to recipe details
+  // View recipe details using the drawer
   const viewRecipeDetails = (recipe: Recipe) => {
-    // Save current state before navigating
-    saveCurrentState('mealplanner', currentWeek, selectedDay);
-    
     // Get the recipe ID, ensuring it's not undefined
-    const recipeId = recipe.id || recipe._id || '';
+    const recipeId = recipe._id || recipe.id || '';
     if (!recipeId) {
       console.error('Recipe ID is missing');
       return;
     }
     
-    // Navigate to the existing recipe detail view
-    router.push({
-      pathname: '/recipe/[id]',
-      params: { id: recipeId }
-    });
+    // Get color for the recipe
+    const colorName = getRecipeColor(recipeId);
+    
+    // Open the recipe drawer
+    setSelectedRecipe({ id: recipeId, color: colorName });
+    
+    // Save current state for when returning from drawer
+    saveCurrentState('mealplanner', currentWeek, selectedDay);
   };
 
   // Count meals for a day
@@ -236,15 +237,22 @@ export default function MealPlannerScreen() {
           <View style={styles.bottomPadding} />
         </ScrollView>
       ) : (
-        // Recipe Selector View
+        // Use our new shared RecipeSelector component
         <RecipeSelector
-          recipes={SAMPLE_RECIPES}
-          selectedDay={selectedDay}
-          selectedMealType={selectedMealType}
           onSelectRecipe={selectMeal}
           onClose={() => setShowRecipeSelector(false)}
-          onViewRecipeDetails={viewRecipeDetails}
-          mealPlan={mealPlan}
+          title={`Måltid - ${selectedDay}`}
+          mode="select"
+        />
+      )}
+      
+      {/* Recipe Drawer */}
+      {selectedRecipe && (
+        <RecipeDrawer
+          recipeId={selectedRecipe.id}
+          colorName={selectedRecipe.color}
+          visible={!!selectedRecipe}
+          onClose={() => setSelectedRecipe(null)}
         />
       )}
     </SafeAreaView>

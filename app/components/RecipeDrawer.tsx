@@ -64,9 +64,16 @@ interface RecipeDrawerProps {
   colorName?: string;
   visible: boolean;
   onClose: () => void;
+  onAddToMealPlan?: (recipe: Recipe) => void;
 }
 
-export default function RecipeDrawer({ recipeId, colorName = 'green', visible, onClose }: RecipeDrawerProps) {
+export default function RecipeDrawer({ 
+  recipeId, 
+  colorName = 'green', 
+  visible, 
+  onClose,
+  onAddToMealPlan
+}: RecipeDrawerProps) {
   const router = useRouter();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
@@ -354,6 +361,18 @@ export default function RecipeDrawer({ recipeId, colorName = 'green', visible, o
             </View>
           )}
         </View>
+        
+        {/* Add to Meal Plan button - only show if onAddToMealPlan is provided */}
+        {onAddToMealPlan && recipe && (
+          <View className="px-4 py-3 border-t border-gray-200">
+            <TouchableOpacity
+              className="bg-primary-green rounded-lg py-3 items-center"
+              onPress={() => onAddToMealPlan(recipe)}
+            >
+              <Text className="text-white font-medium">Legg til i måltidsplan</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     );
   };
