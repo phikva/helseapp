@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../../../lib/theme';
@@ -11,8 +11,10 @@ type RecipeListProps = {
   error: string | null;
   onRecipePress: (recipe: any) => void;
   onAddRecipe: (recipe: any) => void;
+  onToggleFavorite?: (recipe: any) => void;
   mode?: 'select' | 'view';
   viewMode?: 'grid' | 'list';
+  showFavorites?: boolean;
 };
 
 const RecipeList = ({ 
@@ -21,16 +23,25 @@ const RecipeList = ({
   error, 
   onRecipePress,
   onAddRecipe,
+  onToggleFavorite,
   mode = 'select',
-  viewMode = 'list'
+  viewMode = 'list',
+  showFavorites = false
 }: RecipeListProps) => {
   const { getRecipeColor } = useContentStore();
   
-  // Keep track of the last used color to avoid repeating colors
-  const lastUsedColorRef = useRef<string | null>(null);
+  // Keep track of the last used color
+  const lastColorRef = useRef<string | null>(null);
   
   // Available colors for recipes (excluding 'light' as requested)
   const availableColors = ['green', 'cyan', 'purple', 'pink', 'blue'];
+  
+  // Enhanced color distribution with preference for pink and purple
+  // This array has more occurrences of pink and purple to increase their frequency
+  const weightedColors = ['green', 'cyan', 'purple', 'purple', 'pink', 'pink', 'blue'];
+
+  // Local state to track favorites (for UI feedback before backend updates)
+  const [localFavorites, setLocalFavorites] = useState<{[key: string]: boolean}>({});
 
   if (isLoading) {
     return (
@@ -59,42 +70,55 @@ const RecipeList = ({
     );
   }
   
-  // Function to get a color that's different from the last used one
-  const getUniqueColor = (recipeId: string, index: number): string => {
-    // Get the base color from the recipe ID
-    let baseColor = getRecipeColor(recipeId);
-    
-    // If the color is 'light', replace it with a different color
-    if (baseColor === 'light') {
-      // Find a color that's not 'light'
-      const otherColors = availableColors.filter(c => c !== 'light');
-      // Use a deterministic approach to select a replacement color
-      const hash = recipeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      baseColor = otherColors[hash % otherColors.length];
+  // Get a consistent color for a recipe based on its ID
+  const getConsistentColor = (recipeId: string, index: number): string => {
+    if (!recipeId) {
+      // If no ID, use weighted distribution based on index
+      return weightedColors[index % weightedColors.length];
     }
     
-    // If this color is the same as the last used color, pick a different one
-    if (baseColor === lastUsedColorRef.current && availableColors.length > 1) {
-      // Find colors that are not the last used color
-      const otherColors = availableColors.filter(c => c !== lastUsedColorRef.current);
-      // Use a deterministic approach to select a replacement color
-      const hash = (recipeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index) % otherColors.length;
-      baseColor = otherColors[hash];
+    // Use the recipe ID to generate a consistent color
+    // This ensures the same recipe always gets the same color
+    let hash = 0;
+    for (let i = 0; i < recipeId.length; i++) {
+      hash = recipeId.charCodeAt(i) + ((hash << 5) - hash);
     }
     
-    // Update the last used color
-    lastUsedColorRef.current = baseColor;
+    // Get a positive number
+    hash = Math.abs(hash);
     
-    return baseColor;
+    // Map to an index in our weighted colors array to favor pink and purple
+    const colorIndex = hash % weightedColors.length;
+    return weightedColors[colorIndex];
+  };
+
+  const handleToggleFavorite = (recipe: any, e: any) => {
+    e.stopPropagation();
+    // Update local state for immediate UI feedback
+    setLocalFavorites(prev => ({
+      ...prev,
+      [recipe._id]: !prev[recipe._id]
+    }));
+    // Call the parent handler if provided
+    if (onToggleFavorite) {
+      onToggleFavorite(recipe);
+    }
   };
 
   const renderGridItem = ({ item, index }: { item: any, index: number }) => {
-    const colorName = getUniqueColor(item._id, index);
-    const bgColor = colors.primary[colorName as keyof typeof colors.primary];
+    // Get a color that's different from the last one
+    const colorName = getConsistentColor(item._id, index);
+    const bgColor = colors.primary[colorName as keyof typeof colors.primary] || colors.primary.green;
+    
+    // Check if this recipe is favorited
+    const isFavorite = item.isFavorite || localFavorites[item._id];
     
     return (
       <TouchableOpacity 
-        style={[styles.gridCard, { backgroundColor: bgColor }]}
+        style={[
+          styles.gridCard, 
+          { backgroundColor: bgColor }
+        ]}
         onPress={() => onRecipePress(item)}
         activeOpacity={0.7}
       >
@@ -114,6 +138,19 @@ const RecipeList = ({
               }}
             >
               <Ionicons name="add-circle" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+          
+          {showFavorites && (
+            <TouchableOpacity 
+              style={styles.favoriteButton}
+              onPress={(e) => handleToggleFavorite(item, e)}
+            >
+              <Ionicons 
+                name={isFavorite ? "heart" : "heart-outline"} 
+                size={24} 
+                color={isFavorite ? "#FF4081" : "#FFFFFF"} 
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -144,20 +181,42 @@ const RecipeList = ({
   };
 
   const renderListItem = ({ item, index }: { item: any, index: number }) => {
-    const colorName = getUniqueColor(item._id, index);
-    const bgColor = colors.primary[colorName as keyof typeof colors.primary];
+    // Get a color that's different from the last one
+    const colorName = getConsistentColor(item._id, index);
+    const bgColor = colors.primary[colorName as keyof typeof colors.primary] || colors.primary.green;
+    
+    // Check if this recipe is favorited
+    const isFavorite = item.isFavorite || localFavorites[item._id];
     
     return (
       <TouchableOpacity 
-        style={[styles.listCard, { backgroundColor: bgColor }]}
+        style={[
+          styles.listCard, 
+          { backgroundColor: bgColor }
+        ]}
         onPress={() => onRecipePress(item)}
         activeOpacity={0.7}
       >
-        <Image 
-          source={getRecipeImageSource(item.image, 100, 100, item._id)}
-          style={styles.listImage}
-          resizeMode="cover"
-        />
+        <View style={styles.listImageContainer}>
+          <Image 
+            source={getRecipeImageSource(item.image, 100, 100, item._id)}
+            style={styles.listImage}
+            resizeMode="cover"
+          />
+          
+          {showFavorites && (
+            <TouchableOpacity 
+              style={styles.listFavoriteButton}
+              onPress={(e) => handleToggleFavorite(item, e)}
+            >
+              <Ionicons 
+                name={isFavorite ? "heart" : "heart-outline"} 
+                size={20} 
+                color={isFavorite ? "#FF4081" : "#FFFFFF"} 
+              />
+            </TouchableOpacity>
+          )}
+        </View>
         
         <View style={styles.listInfo}>
           <Text style={styles.listName}>{item.tittel}</Text>
@@ -190,10 +249,14 @@ const RecipeList = ({
   return (
     <FlatList
       data={recipes}
-      keyExtractor={(item) => item._id}
+      keyExtractor={(item) => item._id || `recipe-${Math.random()}`}
       contentContainerStyle={viewMode === 'grid' ? styles.gridContent : styles.listContent}
       renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
       numColumns={viewMode === 'grid' ? 1 : 1}
+      removeClippedSubviews={false}
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      windowSize={5}
     />
   );
 };
@@ -314,6 +377,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  listImageContainer: {
+    position: 'relative',
+  },
   listImage: {
     width: 80,
     height: 80,
@@ -341,6 +407,24 @@ const styles = StyleSheet.create({
   listActionButton: {
     justifyContent: 'center',
     paddingRight: 12,
+  },
+  
+  favoriteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    padding: 6,
+  },
+  
+  listFavoriteButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 16,
+    padding: 4,
   },
 });
 

@@ -18,6 +18,7 @@ export type Recipe = {
     karbs: number;
     fett: number;
   };
+  _colorName?: string; // Store the color name for consistent display
 };
 
 // Define the meal plan structure

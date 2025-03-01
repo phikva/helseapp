@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, fonts } from '../../../lib/theme';
@@ -27,12 +27,6 @@ const DayMealPlan = ({
 }: DayMealPlanProps) => {
   const { getRecipeColor } = useContentStore();
   
-  // Keep track of the last used color to avoid repeating colors
-  const lastUsedColorRef = useRef<string | null>(null);
-  
-  // Available colors for recipes (excluding 'light')
-  const availableColors = ['green', 'cyan', 'purple', 'pink', 'blue'];
-  
   // Get active meal slots for this day
   const activeMealSlots = Object.keys(meals);
   
@@ -46,37 +40,6 @@ const DayMealPlan = ({
     if (existingNumbers.length === 0) return 1;
     return Math.max(...existingNumbers) + 1;
   };
-  
-  // Function to get a color that's different from the last used one
-  const getUniqueColor = (recipeId: string): string => {
-    if (!recipeId) return availableColors[0];
-    
-    // Get the base color from the recipe ID
-    let baseColor = getRecipeColor(recipeId);
-    
-    // If the color is 'light', replace it with a different color
-    if (baseColor === 'light') {
-      // Find a color that's not 'light' and not the last used color
-      const otherColors = availableColors.filter(c => c !== 'light' && c !== lastUsedColorRef.current);
-      // Use a deterministic approach to select a replacement color
-      const hash = recipeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      baseColor = otherColors[hash % otherColors.length];
-    }
-    
-    // If this color is the same as the last used color, pick a different one
-    if (baseColor === lastUsedColorRef.current && availableColors.length > 1) {
-      // Find colors that are not the last used color
-      const otherColors = availableColors.filter(c => c !== lastUsedColorRef.current);
-      // Use a deterministic approach to select a replacement color
-      const hash = recipeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      baseColor = otherColors[hash % otherColors.length];
-    }
-    
-    // Update the last used color
-    lastUsedColorRef.current = baseColor;
-    
-    return baseColor;
-  };
 
   return (
     <View style={styles.dayContent}>
@@ -88,8 +51,20 @@ const DayMealPlan = ({
           
           // Get recipe and color if available
           const recipe = meals[mealId];
-          const recipeId = recipe ? (recipe._id || recipe.id || '') : '';
-          const colorName = recipe ? getUniqueColor(recipeId) : '';
+          const recipeId = recipe ? (recipe._id || recipe.id || '').toString() : '';
+          
+          // Use the stored color if available, otherwise get it from the content store
+          let colorName = recipe && recipe._colorName 
+            ? recipe._colorName 
+            : recipe ? getRecipeColor(recipeId) : '';
+          
+          // Make sure we have a valid color - fallback to green if not
+          if (!recipe) {
+            colorName = '';
+          } else if (!colorName || colorName === 'light' || !colors.primary[colorName as keyof typeof colors.primary]) {
+            colorName = 'green'; // Default fallback color
+          }
+          
           const bgColor = recipe ? colors.primary[colorName as keyof typeof colors.primary] : '';
           
           return (
@@ -115,7 +90,7 @@ const DayMealPlan = ({
               {meals[mealId] ? (
                 // Meal is planned - make it clickable to view details
                 <TouchableOpacity 
-                  style={[styles.plannedMeal, { backgroundColor: bgColor }]}
+                  style={[styles.plannedMeal, { backgroundColor: bgColor || colors.primary.green }]}
                   onPress={() => meals[mealId] && onViewRecipeDetails(meals[mealId])}
                   activeOpacity={0.7}
                 >
@@ -272,6 +247,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primary.green,
     fontFamily: fonts.body.medium,
+  },
+  emptyText: {
+    fontFamily: fonts.body.regular,
+    color: '#888',
+    fontStyle: 'italic',
   },
 });
 

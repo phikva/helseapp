@@ -19,6 +19,7 @@ export default function AnimatedScrollView({
   const insets = useSafeAreaInsets();
   const totalHeaderHeight = headerHeight + insets.top;
   const prevHeaderHeightRef = useRef(totalHeaderHeight);
+  const scrollViewRef = useRef<any>(null);
   
   // Notify parent component of header height changes, but only when it actually changes
   useEffect(() => {
@@ -27,6 +28,12 @@ export default function AnimatedScrollView({
       onHeaderHeightChange(totalHeaderHeight);
     }
   }, [totalHeaderHeight, onHeaderHeightChange]);
+
+  // Ensure the header is visible on initial render
+  useEffect(() => {
+    // Set initial scroll position to 0 to ensure header is visible
+    scrollY.setValue(0);
+  }, []);
 
   // Memoize the scroll event handler to prevent recreating it on every render
   const scrollHandler = React.useMemo(() => 
@@ -39,6 +46,7 @@ export default function AnimatedScrollView({
 
   return (
     <Animated.ScrollView
+      ref={scrollViewRef}
       scrollEventThrottle={1} // More responsive scroll events for better header behavior
       onScroll={scrollHandler}
       contentContainerStyle={{

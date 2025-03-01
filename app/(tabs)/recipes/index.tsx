@@ -521,6 +521,15 @@ export default function RecipesScreen() {
     }
   };
 
+  // Handle tab change
+  const handleTabChange = (tab: 'all' | 'favorites') => {
+    // Reset scroll position
+    scrollY.setValue(0);
+    
+    // Update active tab
+    setActiveTab(tab);
+  };
+
   if (loading || contentLoading) {
     return (
       <SafeAreaView className="flex-1 bg-primary-light">
@@ -648,7 +657,7 @@ export default function RecipesScreen() {
         filteredCount={activeTab === 'all' ? filteredRecipes.length : filteredFavorites?.length}
         showFilters={showFilters}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         recipesCount={recipes?.length}
         favoritesCount={favoriteRecipes?.length}
       />
@@ -865,6 +874,8 @@ export default function RecipesScreen() {
               recipeFiltersRef.current.resetFilters();
             }
           }}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
         />
       )}
       

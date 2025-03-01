@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getSavedRecipes, getFavoriteRecipes, SavedRecipe } from '../services/savedRecipesService';
+import { getSavedRecipes, getFavoriteRecipes, SavedRecipe, saveRecipe as saveRecipeService, removeRecipe } from '../services/savedRecipesService';
 import { useAuthStore } from './authStore';
 import { client } from '../sanity';
 import { Recipe } from './contentStore';
@@ -20,6 +20,7 @@ interface SavedRecipesContextType {
   refreshSavedRecipes: () => Promise<void>;
   refreshFavoriteRecipes: () => Promise<void>;
   isCacheStale: () => boolean;
+  toggleFavorite: (recipeId: string) => Promise<void>;
 }
 
 const SavedRecipesContext = createContext<SavedRecipesContextType | undefined>(undefined);
@@ -165,6 +166,37 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
   };
 
+  // Toggle favorite status for a recipe
+  const toggleFavorite = async (recipeId: string) => {
+    if (!session?.user) {
+      console.error('No user session, cannot toggle favorite');
+      return;
+    }
+    
+    try {
+      // Check if the recipe is already a favorite
+      const existingFavorite = favoriteRecipes.find(
+        fav => fav.recipe_id === recipeId && fav.is_favorite
+      );
+      
+      if (existingFavorite) {
+        // If it's already a favorite, remove it
+        await removeRecipe(session.user.id, recipeId);
+      } else {
+        // If it's not a favorite, add it
+        await saveRecipeService(session.user.id, recipeId, true);
+      }
+      
+      // Refresh both lists to ensure consistency
+      await refreshFavoriteRecipes();
+      await refreshSavedRecipes();
+      
+    } catch (error) {
+      console.error('Error toggling favorite status:', error);
+      setError('Failed to update favorite status');
+    }
+  };
+
   // Initial load when user session changes
   useEffect(() => {
     if (session?.user) {
@@ -190,7 +222,8 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
     lastRefreshed,
     refreshSavedRecipes,
     refreshFavoriteRecipes,
-    isCacheStale
+    isCacheStale,
+    toggleFavorite
   };
   
   // Update the savedRecipesStore ref whenever the context value changes

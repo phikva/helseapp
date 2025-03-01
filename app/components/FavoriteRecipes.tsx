@@ -35,6 +35,8 @@ interface FavoriteRecipesProps {
   onResetFilters?: () => void;
   viewMode?: 'grid' | 'list';
   onViewModeChange?: (mode: 'grid' | 'list') => void;
+  activeTab?: 'all' | 'favorites';
+  onTabChange?: (tab: 'all' | 'favorites') => void;
 }
 
 const FavoriteRecipes = ({ 
@@ -49,7 +51,9 @@ const FavoriteRecipes = ({
   hasActiveFilters = false,
   onResetFilters,
   viewMode = 'grid',
-  onViewModeChange
+  onViewModeChange,
+  activeTab = 'favorites',
+  onTabChange
 }: FavoriteRecipesProps) => {
   const router = useRouter();
   const { favoriteRecipes, isLoading, error: recipesError, refreshFavoriteRecipes, isCacheStale } = useSavedRecipesStore();
@@ -58,6 +62,7 @@ const FavoriteRecipes = ({
   const [localLoading, setLocalLoading] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
   const [removingRecipeId, setRemovingRecipeId] = useState<string | null>(null);
+  const [showLocalFilters, setShowLocalFilters] = useState(false);
   const recipeFiltersRef = useRef<{
     resetFilters: () => void;
     updateSearchTerm?: (term: string) => void;
@@ -448,6 +453,44 @@ const FavoriteRecipes = ({
     }
   }, [categories, filters.selectedCategories, maxValues]);
 
+  // Create active filters array for display in the header
+  const activeFiltersArray = useMemo(() => {
+    return [
+      // Category filters
+      ...(filters.selectedCategories.length > 0 ? [{
+        name: 'Kategorier',
+        value: filters.selectedCategories.map(catId => {
+          const category = categories?.find(c => c._id === catId);
+          return category ? category.name : '';
+        }).filter(Boolean).join(', ')
+      }] : []),
+      
+      // Calorie filter
+      ...(filters.calories.min > 0 || filters.calories.max < maxValues.calories ? [{
+        name: 'Kalorier',
+        value: `${filters.calories.min}-${filters.calories.max} kcal`
+      }] : []),
+      
+      // Protein filter
+      ...(filters.protein.min > 0 || filters.protein.max < maxValues.protein ? [{
+        name: 'Protein',
+        value: `${filters.protein.min}-${filters.protein.max} g`
+      }] : []),
+      
+      // Carbs filter
+      ...(filters.carbs.min > 0 || filters.carbs.max < maxValues.carbs ? [{
+        name: 'Karbohydrater',
+        value: `${filters.carbs.min}-${filters.carbs.max} g`
+      }] : []),
+      
+      // Fat filter
+      ...(filters.fat.min > 0 || filters.fat.max < maxValues.fat ? [{
+        name: 'Fett',
+        value: `${filters.fat.min}-${filters.fat.max} g`
+      }] : [])
+    ];
+  }, [filters, categories, maxValues]);
+
   // Handle loading state
   if (localLoading && isLoading) {
     return (
@@ -680,6 +723,9 @@ const FavoriteRecipes = ({
           }
         }}
         onFilterPress={() => {
+          // Toggle filter visibility
+          setShowLocalFilters(!showLocalFilters);
+          
           // Open the filter drawer using the ref
           if (recipeFiltersRef.current?.open) {
             recipeFiltersRef.current.open();
@@ -704,6 +750,7 @@ const FavoriteRecipes = ({
         onRemoveFilter={handleRemoveFilter}
         viewMode={activeViewMode}
         onViewModeChange={handleViewModeChange}
+        showFilters={showFilters || showLocalFilters}
         hasActiveFilters={
           filters.searchTerm !== '' || 
           filters.selectedCategories.length > 0 || 
@@ -716,6 +763,12 @@ const FavoriteRecipes = ({
           filters.fat.min > 0 || 
           filters.fat.max < maxValues.fat
         }
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        activeFilters={activeFiltersArray}
+        filteredCount={filteredFavorites?.length}
+        favoritesCount={favoriteRecipes?.length}
+        recipesCount={useContentStore().recipes?.length}
       />
     </View>
   );

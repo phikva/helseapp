@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts } from '../../../lib/theme';
 import { useContentStore } from '../../../lib/store/contentStore';
 import { useSavedRecipesStore } from '../../../lib/store/savedRecipesStore';
+import { useToast } from '../../components/ui/Toast';
 import RecipeFilters from '../RecipeFilters';
 import RecipeList from './RecipeList';
 import RecipeDrawer from '../RecipeDrawer';
@@ -36,7 +37,8 @@ const RecipeSelector = ({
 }: RecipeSelectorProps) => {
   const router = useRouter();
   const { recipes, categories, isLoading: contentLoading, error: contentError, getRecipeColor } = useContentStore();
-  const { favoriteRecipes, refreshFavoriteRecipes, isCacheStale } = useSavedRecipesStore();
+  const { favoriteRecipes, refreshFavoriteRecipes, isCacheStale, toggleFavorite } = useSavedRecipesStore();
+  const toast = useToast();
   const recipeFiltersRef = useRef<any>(null);
   
   // Tab state
@@ -191,6 +193,31 @@ const RecipeSelector = ({
     });
   }, [recipes, filters]);
 
+  // Handle toggling favorite status
+  const handleToggleFavorite = (recipe: any) => {
+    if (!recipe || !recipe._id) return;
+    
+    // Call the toggleFavorite function from the store
+    toggleFavorite(recipe._id);
+    
+    // Show toast notification
+    const isFavorite = favoriteRecipes.some(
+      fav => fav.recipe_id === recipe._id && fav.is_favorite
+    );
+    
+    if (isFavorite) {
+      toast.showToast({
+        type: 'info',
+        message: 'Oppskrift fjernet fra favoritter',
+      });
+    } else {
+      toast.showToast({
+        type: 'success',
+        message: 'Oppskrift lagt til i favoritter',
+      });
+    }
+  };
+
   // Get favorite recipes
   const favoriteRecipesList = React.useMemo(() => {
     if (!favoriteRecipes || !recipes) return [];
@@ -200,15 +227,26 @@ const RecipeSelector = ({
       .filter(fav => fav.is_favorite)
       .map(fav => {
         const recipe = recipes.find(r => r._id === fav.recipe_id);
-        return recipe;
+        if (recipe) {
+          // Add isFavorite flag to recipe object for UI
+          return { ...recipe, isFavorite: true };
+        }
+        return null;
       })
       .filter(recipe => !!recipe); // Filter out undefined recipes
   }, [favoriteRecipes, recipes]);
 
-  // Show category name if only one category is selected
-  const selectedCategoryName = filters.selectedCategories.length === 1 
-    ? categories?.find(cat => cat._id === filters.selectedCategories[0])?.name 
-    : null;
+  // Add isFavorite flag to filtered recipes
+  const enhancedFilteredRecipes = React.useMemo(() => {
+    if (!filteredRecipes || !favoriteRecipes) return filteredRecipes;
+    
+    return filteredRecipes.map(recipe => {
+      const isFavorite = favoriteRecipes.some(
+        fav => fav.recipe_id === recipe._id && fav.is_favorite
+      );
+      return { ...recipe, isFavorite };
+    });
+  }, [filteredRecipes, favoriteRecipes]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -258,13 +296,6 @@ const RecipeSelector = ({
         </View>
       )}
       
-      {/* Selected category indicator */}
-      {activeTab === 'all' && selectedCategoryName && (
-        <View style={styles.categoryIndicator}>
-          <Text style={styles.categoryName}>{selectedCategoryName}</Text>
-        </View>
-      )}
-      
       {/* Filters - only show in "all" tab */}
       {activeTab === 'all' && (
         <RecipeFilters
@@ -277,13 +308,15 @@ const RecipeSelector = ({
       
       {/* Recipe List */}
       <RecipeList 
-        recipes={activeTab === 'all' ? filteredRecipes : favoriteRecipesList}
+        recipes={activeTab === 'all' ? enhancedFilteredRecipes : favoriteRecipesList}
         isLoading={contentLoading}
         error={contentError}
         onRecipePress={handleRecipePress}
         onAddRecipe={handleAddRecipe}
         mode={mode}
         viewMode={viewMode}
+        showFavorites={true}
+        onToggleFavorite={handleToggleFavorite}
       />
       
       {/* Recipe Drawer */}
@@ -317,7 +350,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: colors.background.DEFAULT,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border ? colors.border.DEFAULT : colors.primary.light,
+    borderBottomColor: colors.primary.light,
   },
   backButton: {
     padding: 8,
@@ -336,7 +369,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.background.DEFAULT,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border ? colors.border.DEFAULT : colors.primary.light,
+    borderBottomColor: colors.primary.light,
   },
   tab: {
     flex: 1,

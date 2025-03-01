@@ -57,7 +57,7 @@ export default function CollapsibleHeader({
   const [filtersHeight, setFiltersHeight] = useState(0);
   const lastScrollY = useRef(0);
   const isScrollingDown = useRef(true);
-  const animatedValue = useRef(new Animated.Value(1)).current; // Start with header hidden (1)
+  const animatedValue = useRef(new Animated.Value(0)).current; // Start with header visible (0)
   const isScrolling = useRef(false);
   const scrollTimer = useRef<NodeJS.Timeout | null>(null);
   const previousFiltersHeight = useRef(filtersHeight);
@@ -75,8 +75,29 @@ export default function CollapsibleHeader({
     }
   };
 
+  // Reset scroll position and show header when tab changes
+  useEffect(() => {
+    // Reset scroll position to top
+    scrollY.setValue(0);
+    lastScrollY.current = 0;
+    
+    // Show header
+    Animated.timing(animatedValue, {
+      toValue: 0, // Show header
+      duration: 0, // Immediate
+      useNativeDriver: true,
+    }).start();
+  }, [activeTab]); // Add activeTab as a dependency
+
   // Track scroll direction and position
   useEffect(() => {
+    // Initialize header as visible
+    Animated.timing(animatedValue, {
+      toValue: 0, // Show header
+      duration: 0, // Immediate
+      useNativeDriver: true,
+    }).start();
+    
     const listener = scrollY.addListener(({ value }) => {
       // Check if at the top
       const isAtTop = value <= 5; // Small threshold to account for bounce effects
@@ -274,9 +295,9 @@ export default function CollapsibleHeader({
           onPress={() => onTabChange?.('all')}
         >
           <Text className={`${activeTab === 'all' ? 'text-primary-green font-medium' : 'text-gray-600'}`}>
-            Alle oppskrifter {activeTab === 'all' && filteredCount !== undefined && hasActiveFilters 
-              ? `(${filteredCount})` 
-              : recipesCount !== undefined ? `(${recipesCount})` : ''}
+            Alle oppskrifter {hasActiveFilters && activeTab === 'all' && filteredCount !== undefined 
+              ? ` (${filteredCount})` 
+              : recipesCount !== undefined ? ` (${recipesCount})` : ''}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -284,9 +305,9 @@ export default function CollapsibleHeader({
           onPress={() => onTabChange?.('favorites')}
         >
           <Text className={`${activeTab === 'favorites' ? 'text-primary-green font-medium' : 'text-gray-600'}`}>
-            Favoritter {activeTab === 'favorites' && filteredCount !== undefined && hasActiveFilters 
-              ? `(${filteredCount})` 
-              : favoritesCount !== undefined ? `(${favoritesCount})` : ''}
+            Favoritter {hasActiveFilters && activeTab === 'favorites' && filteredCount !== undefined 
+              ? ` (${filteredCount})` 
+              : favoritesCount !== undefined ? ` (${favoritesCount})` : ''}
           </Text>
         </TouchableOpacity>
       </View>

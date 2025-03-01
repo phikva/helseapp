@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -19,13 +19,22 @@ export default function MealPlannerScreen() {
   const { getRecipeColor } = useContentStore();
   
   // Get state from Zustand store
-  const { currentWeek: storedWeek, expandedDay: storedExpandedDay, setCurrentWeek, setExpandedDay, saveCurrentState } = useMealPlannerStore();
+  const { 
+    currentWeek: storedWeek, 
+    expandedDay: storedExpandedDay, 
+    setCurrentWeek, 
+    setExpandedDay, 
+    saveCurrentState,
+    getMealPlanForWeek,
+    addMealToDay,
+    removeMealFromDay,
+    addMealSlotToDay
+  } = useMealPlannerStore();
   
   // Local state
   const [currentWeek, setLocalCurrentWeek] = useState<Date>(storedWeek);
   const [selectedDay, setSelectedDay] = useState<string>(storedExpandedDay);
   const [selectedMealType, setSelectedMealType] = useState('meal1');
-  const [mealPlan, setMealPlan] = useState<MealPlan>(INITIAL_MEAL_PLAN);
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [expandedDays, setExpandedDays] = useState<{[key: string]: boolean}>({
     'Mandag': false,
@@ -36,6 +45,9 @@ export default function MealPlannerScreen() {
     'Lørdag': false,
     'Søndag': false,
   });
+  
+  // Get the meal plan for the current week
+  const [mealPlan, setMealPlan] = useState(() => getMealPlanForWeek(currentWeek));
   
   // Recipe drawer state
   const [selectedRecipe, setSelectedRecipe] = useState<{ id: string, color: string } | null>(null);
@@ -56,6 +68,23 @@ export default function MealPlannerScreen() {
     setLocalCurrentWeek(storedWeek);
   }, [storedWeek]);
 
+  // Update meal plan when week changes or when store updates
+  useEffect(() => {
+    // Get the current meal plan from the store
+    const currentMealPlan = getMealPlanForWeek(currentWeek);
+    setMealPlan(currentMealPlan);
+    
+    // Create a subscription to the store
+    const unsubscribe = useMealPlannerStore.subscribe((state) => {
+      // When store changes, update the local meal plan
+      const updatedMealPlan = getMealPlanForWeek(currentWeek);
+      setMealPlan(updatedMealPlan);
+    });
+    
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [currentWeek, getMealPlanForWeek]);
+
   // Navigate to previous week
   const goToPreviousWeek = () => {
     const newDate = new Date(currentWeek);
@@ -73,28 +102,41 @@ export default function MealPlannerScreen() {
   };
 
   // Handle selecting a meal for a specific day and meal type
-  const selectMeal = (recipe: Recipe) => {
-    setMealPlan(prevPlan => ({
-      ...prevPlan,
-      [selectedDay]: {
-        ...prevPlan[selectedDay],
-        [selectedMealType]: recipe,
-      }
-    }));
+  const selectMeal = useCallback((recipe: Recipe) => {
+    // Get the recipe ID
+    const recipeId = recipe._id || recipe.id || '';
+    
+    // Get the color for this recipe and store it with the recipe
+    let colorName = getRecipeColor(recipeId.toString());
+    
+    // Make sure we have a valid color - fallback to green if not
+    if (!colorName || colorName === 'light' || !colors.primary[colorName as keyof typeof colors.primary]) {
+      colorName = 'green'; // Default fallback color
+    }
+    
+    // Create a new recipe object with the color information
+    const recipeWithColor = {
+      ...recipe,
+      _colorName: colorName // Add color information to the recipe
+    };
+    
+    // Add the recipe with color to the meal plan
+    addMealToDay(currentWeek, selectedDay, selectedMealType, recipeWithColor);
     setShowRecipeSelector(false);
-  };
+    
+    // Force update the meal plan immediately
+    const updatedMealPlan = getMealPlanForWeek(currentWeek);
+    setMealPlan(updatedMealPlan);
+  }, [currentWeek, selectedDay, selectedMealType, addMealToDay, getMealPlanForWeek, getRecipeColor]);
 
   // Handle removing a meal from the plan
-  const removeMeal = (day: string, mealType: string) => {
-    // Always remove the meal slot entirely
-    const updatedDayMeals = { ...mealPlan[day] };
-    delete updatedDayMeals[mealType];
+  const removeMeal = useCallback((day: string, mealType: string) => {
+    removeMealFromDay(currentWeek, day, mealType);
     
-    setMealPlan(prevPlan => ({
-      ...prevPlan,
-      [day]: updatedDayMeals
-    }));
-  };
+    // Force update the meal plan immediately
+    const updatedMealPlan = getMealPlanForWeek(currentWeek);
+    setMealPlan(updatedMealPlan);
+  }, [currentWeek, removeMealFromDay, getMealPlanForWeek]);
 
   // Open recipe selector for a specific day and meal type
   const openRecipeSelector = (day: string, mealType: string) => {
@@ -122,7 +164,7 @@ export default function MealPlannerScreen() {
   };
 
   // Add a new meal slot to a day
-  const addNewMealSlot = (day: string) => {
+  const addNewMealSlot = useCallback((day: string) => {
     const dayMeals = mealPlan[day];
     const mealNumbers = Object.keys(dayMeals)
       .map(key => {
@@ -134,20 +176,18 @@ export default function MealPlannerScreen() {
     const nextMealNumber = mealNumbers.length > 0 ? Math.max(...mealNumbers) + 1 : 1;
     const newMealId = `meal${nextMealNumber}`;
     
-    // Update meal plan with new slot
-    setMealPlan(prevPlan => ({
-      ...prevPlan,
-      [day]: {
-        ...prevPlan[day],
-        [newMealId]: null
-      }
-    }));
+    // Add new meal slot to the store
+    addMealSlotToDay(currentWeek, day, newMealId);
+    
+    // Force update the meal plan immediately
+    const updatedMealPlan = getMealPlanForWeek(currentWeek);
+    setMealPlan(updatedMealPlan);
     
     // Automatically open recipe selector for the new meal slot
     setSelectedDay(day);
     setSelectedMealType(newMealId);
     setShowRecipeSelector(true);
-  };
+  }, [currentWeek, mealPlan, addMealSlotToDay, getMealPlanForWeek]);
 
   // View recipe details using the drawer
   const viewRecipeDetails = (recipe: Recipe) => {
@@ -158,8 +198,13 @@ export default function MealPlannerScreen() {
       return;
     }
     
-    // Get color for the recipe
-    const colorName = getRecipeColor(recipeId.toString());
+    // Use the stored color if available, otherwise get it from the content store
+    let colorName = recipe._colorName || getRecipeColor(recipeId.toString());
+    
+    // Make sure we have a valid color - fallback to green if not
+    if (!colorName || colorName === 'light' || !colors.primary[colorName as keyof typeof colors.primary]) {
+      colorName = 'green'; // Default fallback color
+    }
     
     // Open the recipe drawer
     setSelectedRecipe({ id: recipeId.toString(), color: colorName });
@@ -170,12 +215,12 @@ export default function MealPlannerScreen() {
 
   // Count meals for a day
   const countMealsForDay = (day: string) => {
-    return Object.values(mealPlan[day]).filter(meal => meal !== null).length;
+    return Object.values(mealPlan[day] || {}).filter(meal => meal !== null).length;
   };
 
   // Count total meal slots for a day
   const countTotalMealSlotsForDay = (day: string) => {
-    return Object.keys(mealPlan[day]).length;
+    return Object.keys(mealPlan[day] || {}).length;
   };
 
   return (
