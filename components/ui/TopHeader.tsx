@@ -1,12 +1,15 @@
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 export function TopHeader() {
   const router = useRouter();
+  
+  // Use platform-specific padding
+  const verticalPadding = Platform.OS === 'android' ? 'py-1' : 'py-2';
 
   return (
-    <View className="px-4 py-2 flex-row justify-between items-center border-b border-gray-200 bg-primary-light">
+    <View className={`px-4 ${verticalPadding} flex-row justify-between items-center border-b border-gray-200 bg-primary-light`}>
       <TouchableOpacity onPress={() => router.push('/cart')}>
         <Feather name="shopping-cart" size={24} color="black" />
       </TouchableOpacity>

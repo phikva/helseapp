@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { View, Text, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, TouchableOpacity, StyleSheet } from 'react-native';
 import { IconSymbol } from './IconSymbol';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -97,22 +97,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {toast && (
         <Animated.View
-          style={{
-            transform: [
-              {
-                translateY: animation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [100, 0],
-                }),
-              },
-            ],
-            opacity: animation,
-            position: 'absolute',
-            bottom: 85,
-            left: 16,
-            right: 16,
-            zIndex: 1000,
-          }}
+          style={[
+            styles.toastContainer,
+            {
+              transform: [
+                {
+                  translateY: animation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-100, 0],
+                  }),
+                },
+              ],
+              opacity: animation,
+            }
+          ]}
         >
           <TouchableOpacity
             activeOpacity={0.9}
@@ -135,4 +133,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       )}
     </ToastContext.Provider>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  toastContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    right: 16,
+    zIndex: 9999,
+    elevation: 9999,
+  }
+}); 

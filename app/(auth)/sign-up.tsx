@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView, Modal, Platform } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, Modal, Platform } from 'react-native'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { supabase } from '@lib/supabase'
@@ -18,6 +18,7 @@ import {
   SMSSignUpModal,
   FeedbackModal
 } from '@components/auth'
+import SafeArea from '@components/SafeArea'
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('')
@@ -444,7 +445,7 @@ export default function SignUpScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 pt-24">
+    <SafeArea edges={['top', 'bottom']} backgroundColor="#fff">
       <View className="flex-1 px-6 bg-light">
         {/* Header */}
         <View className="mb-6">
@@ -457,24 +458,98 @@ export default function SignUpScreen() {
         </View>
 
         {/* Email/Password Form */}
-        <EmailPasswordForm
-          email={email}
-          password={password}
-          onEmailChange={setEmail}
-          onPasswordChange={setPassword}
-          onSubmit={signUp}
-          loading={loading}
-          submitText="Registrer"
-        />
+        <View className="space-y-4">
+          <View className="bg-background-secondary rounded-full px-4 py-[22px] flex-row items-center">
+            <EnvelopeIcon size={20} color="#3C3C43" />
+            <TextInput
+              className="flex-1 text-body-large font-body ml-2"
+              placeholder="Din e-post"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+          </View>
 
-        {/* Alternative Sign-in Methods */}
-        <AlternativeSignInMethods
-          onEmailPress={() => setShowEmailModal(true)}
-          onGooglePress={() => {/* Handle Google sign-in */}}
-          onSMSPress={() => setShowSMSModal(true)}
-          loading={loading}
-          isSignUp
-        />
+          {/* Password Login */}
+          <View className="space-y-4">
+            <View className="bg-background-secondary rounded-full px-4 py-[22px] flex-row items-center">
+              <LockClosedIcon size={20} color="#3C3C43" />
+              <TextInput
+                className="flex-1 text-body-large font-body ml-2"
+                placeholder="Ditt passord"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity 
+              className="bg-black py-[22px] border border-primary-Black px-6 rounded-full flex-row items-center justify-between"
+              onPress={signUp}
+              disabled={loading || !email || !password}
+            >
+              <Text className="text-white text-body-large font-heading-medium">
+                {loading ? 'Registrerer...' : 'Registrer'}
+              </Text>
+              <ArrowRightIcon size={20} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Alternative Login Methods */}
+        <View className="mt-8">
+          <View className="flex-row items-center mb-6">
+            <View className="flex-1 h-[1px] bg-text-secondary/10" />
+            <Text className="mx-4 text-body-medium font-body text-text-secondary">
+              Eller
+            </Text>
+            <View className="flex-1 h-[1px] bg-text-secondary/10" />
+          </View>
+
+          <View className="space-y-3">
+            {/* Email Magic Link */}
+            <TouchableOpacity 
+              className="bg-background-secondary py-[22px] px-6 rounded-full flex-row items-center justify-between"
+              onPress={() => setShowEmailModal(true)}
+              disabled={loading}
+            >
+              <View className="flex-row items-center">
+                <EnvelopeIcon size={20} color="#3C3C43" />
+                <Text className="text-text text-body-large font-heading-medium ml-2">
+                  Få registreringslink på e-post
+                </Text>
+              </View>
+              <ArrowRightIcon size={20} color="#3C3C43" />
+            </TouchableOpacity>
+
+            {/* Google Login */}
+            <TouchableOpacity className="bg-background-secondary py-[22px] px-6 rounded-full flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <GoogleIcon size={20} color="#3C3C43" />
+                <Text className="text-text text-body-large font-heading-medium ml-2">
+                  Fortsett med Google
+                </Text>
+              </View>
+              <ArrowRightIcon size={20} color="#3C3C43" />
+            </TouchableOpacity>
+
+            {/* SMS Login Button */}
+            <TouchableOpacity 
+              className="bg-background-secondary py-[22px] px-6 rounded-full flex-row items-center justify-between"
+              onPress={() => setShowSMSModal(true)}
+              disabled={loading}
+            >
+              <View className="flex-row items-center">
+                <Text className="text-text text-body-large font-heading-medium">
+                  Få registreringskode på SMS
+                </Text>
+              </View>
+              <ArrowRightIcon size={20} color="#3C3C43" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Email Verification Modal */}
         <EmailVerificationModal
@@ -529,6 +604,6 @@ export default function SignUpScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </SafeArea>
   )
 } 

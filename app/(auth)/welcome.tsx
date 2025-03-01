@@ -1,7 +1,8 @@
-import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native'
+import { View, Text, TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
 import { layout } from '../../lib/theme'
 import { Button } from '../../components/ui/Button'
+import SafeArea from '@components/SafeArea'
 
 export default function WelcomeScreen() {
   console.log('Rendering WelcomeScreen');
@@ -17,7 +18,10 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeArea 
+      edges={['top', 'bottom']} 
+      backgroundColor="#fff"
+    >
       <View className="flex-1 justify-center px-6 bg-light">
         {/* Content Container */}
         <View>
@@ -55,6 +59,6 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </SafeArea>
   );
 } 

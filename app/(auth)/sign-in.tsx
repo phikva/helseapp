@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView, Modal, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, Modal, Alert } from 'react-native'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
@@ -9,6 +9,7 @@ import {
   ArrowRightIcon,
   GoogleIcon
 } from '@components/Icon'
+import SafeArea from '@components/SafeArea'
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('')
@@ -355,7 +356,7 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 pt-24">
+    <SafeArea edges={['top', 'bottom']} backgroundColor="#fff">
       <View className="flex-1 px-6 bg-light">
         {/* Header */}
         <View className="mb-6">
@@ -369,7 +370,7 @@ export default function SignInScreen() {
 
         {/* Email Input */}
         <View className="space-y-4">
-          <View className="bg-background-secondary rounded-2xl px-4 py-[14px] flex-row items-center">
+          <View className="bg-background-secondary rounded-full px-4 py-[22px] flex-row items-center">
             <EnvelopeIcon size={20} color="#3C3C43" />
             <TextInput
               className="flex-1 text-body-large font-body ml-2"
@@ -387,7 +388,7 @@ export default function SignInScreen() {
 
           {/* Password Login */}
           <View className="space-y-4">
-            <View className="bg-background-secondary rounded-2xl px-4 py-[14px] flex-row items-center">
+            <View className="bg-background-secondary rounded-full px-4 py-[22px] flex-row items-center">
               <LockClosedIcon size={20} color="#3C3C43" />
               <TextInput
                 className="flex-1 text-body-large font-body ml-2"
@@ -399,7 +400,7 @@ export default function SignInScreen() {
             </View>
 
             <TouchableOpacity 
-              className="bg-primary-Black py-[18px] px-6 rounded-full flex-row items-center justify-between"
+              className="bg-black py-[22px] border border-primary-Black px-6 rounded-full flex-row items-center justify-between"
               onPress={handleSignIn}
               disabled={loading || !email || !password}
             >
@@ -424,7 +425,7 @@ export default function SignInScreen() {
           <View className="space-y-3">
             {/* Email Magic Link */}
             <TouchableOpacity 
-              className="bg-background-secondary py-[14px] px-6 rounded-full flex-row items-center justify-between"
+              className="bg-background-secondary py-[22px] px-6 rounded-full flex-row items-center justify-between"
               onPress={() => setShowEmailModal(true)}
               disabled={loading}
             >
@@ -438,7 +439,7 @@ export default function SignInScreen() {
             </TouchableOpacity>
 
             {/* Google Login */}
-            <TouchableOpacity className="bg-background-secondary py-[14px] px-6 rounded-full flex-row items-center justify-between">
+            <TouchableOpacity className="bg-background-secondary py-[22px] px-6 rounded-full flex-row items-center justify-between">
               <View className="flex-row items-center">
                 <GoogleIcon size={20} color="#3C3C43" />
                 <Text className="text-text text-body-large font-heading-medium ml-2">
@@ -450,7 +451,7 @@ export default function SignInScreen() {
 
             {/* SMS Login Button */}
             <TouchableOpacity 
-              className="bg-background-secondary py-[14px] px-6 rounded-full flex-row items-center justify-between"
+              className="bg-background-secondary py-[22px] px-6 rounded-full flex-row items-center justify-between"
               onPress={() => setShowSMSModal(true)}
               disabled={loading}
             >
@@ -636,6 +637,6 @@ export default function SignInScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </SafeArea>
   )
 } 

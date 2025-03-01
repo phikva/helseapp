@@ -8,6 +8,9 @@ import { getRecipeByIdQuery } from '../queries/recipeQueries';
 // Time in milliseconds before we consider the data stale (5 minutes)
 const CACHE_EXPIRY_TIME = 5 * 60 * 1000;
 
+// Add a cache for recipe details to avoid redundant fetches
+const recipeDetailsCache: Record<string, Recipe> = {};
+
 interface SavedRecipesContextType {
   savedRecipes: SavedRecipe[];
   favoriteRecipes: SavedRecipe[];
@@ -50,8 +53,19 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // Fetch recipe details from Sanity
   const fetchRecipeDetails = async (recipeId: string): Promise<Recipe | null> => {
+    // Check cache first
+    if (recipeDetailsCache[recipeId]) {
+      return recipeDetailsCache[recipeId];
+    }
+    
     try {
       const recipe = await client.fetch(getRecipeByIdQuery, { id: recipeId });
+      
+      // Cache the result
+      if (recipe) {
+        recipeDetailsCache[recipeId] = recipe;
+      }
+      
       return recipe;
     } catch (error) {
       console.error('Error fetching recipe details:', error);
@@ -61,6 +75,7 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // Enrich saved recipes with recipe details
   const enrichSavedRecipes = async (savedRecipes: SavedRecipe[]): Promise<SavedRecipe[]> => {
+    // Use Promise.all for parallel fetching
     const enrichedRecipes = await Promise.all(
       savedRecipes.map(async (savedRecipe) => {
         const recipeDetails = await fetchRecipeDetails(savedRecipe.recipe_id);
@@ -77,7 +92,11 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
   const refreshSavedRecipes = async () => {
     if (!session?.user) return;
     
-    setIsLoading(true);
+    // Don't set loading state if we already have data
+    const shouldSetLoading = savedRecipes.length === 0;
+    if (shouldSetLoading) {
+      setIsLoading(true);
+    }
     setError(null);
     
     try {
@@ -89,7 +108,9 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
       console.error('Error fetching saved recipes:', error);
       setError('Failed to load saved recipes');
     } finally {
-      setIsLoading(false);
+      if (shouldSetLoading) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -101,7 +122,11 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
       return;
     }
     
-    setIsLoading(true);
+    // Don't set loading state if we already have data
+    const shouldSetLoading = favoriteRecipes.length === 0;
+    if (shouldSetLoading) {
+      setIsLoading(true);
+    }
     setError(null);
     
     try {
@@ -115,7 +140,9 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
         console.log("No favorite recipes found for user");
         setFavoriteRecipes([]);
         setLastRefreshed(Date.now());
-        setIsLoading(false);
+        if (shouldSetLoading) {
+          setIsLoading(false);
+        }
         return;
       }
       
@@ -132,7 +159,9 @@ export const SavedRecipesProvider: React.FC<{ children: ReactNode }> = ({ childr
       setFavoriteRecipes([]);
     } finally {
       // Always ensure loading state is reset
-      setIsLoading(false);
+      if (shouldSetLoading) {
+        setIsLoading(false);
+      }
     }
   };
 

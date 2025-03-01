@@ -10,6 +10,7 @@ import { useSavedRecipesStore } from '../../lib/store/savedRecipesStore';
 import { useContentStore } from '../../lib/store/contentStore';
 import { useMealPlannerStore } from '../../lib/store/mealPlannerStore';
 import { getRecipeImageSource } from '../../lib/imageUtils';
+import { useToast } from '../components/ui/Toast';
 
 interface Recipe {
   _id: string;
@@ -64,6 +65,7 @@ export default function RecipeDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -127,10 +129,12 @@ export default function RecipeDetailScreen() {
       const { refreshSavedRecipes } = useSavedRecipesStore.getState();
       refreshSavedRecipes();
       
-      Alert.alert(
-        isFavorite ? 'Fjernet fra favoritter' : 'Lagt til i favoritter',
-        isFavorite ? 'Oppskriften er fjernet fra favorittene dine' : 'Oppskriften er lagt til i favorittene dine'
-      );
+      // Show toast instead of alert
+      showToast({
+        type: 'success',
+        title: isFavorite ? 'Fjernet fra favoritter' : 'Lagt til i favoritter',
+        message: isFavorite ? 'Oppskriften er fjernet fra favorittene dine' : 'Oppskriften er lagt til i favorittene dine'
+      });
     } catch (error: any) {
       console.error('Error saving recipe:', error);
       
@@ -157,7 +161,12 @@ export default function RecipeDetailScreen() {
         }
       }
       
-      Alert.alert('Feil', errorMessage);
+      // Show error toast instead of alert
+      showToast({
+        type: 'error',
+        title: 'Feil',
+        message: errorMessage
+      });
     } finally {
       setSavingStatus(false);
     }

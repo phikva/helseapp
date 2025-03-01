@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, Alert, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSavedRecipesStore } from '../../lib/store/savedRecipesStore';
 import { urlFor } from '../../lib/sanity';
@@ -9,6 +9,9 @@ import { useContentStore } from '../../lib/store/contentStore';
 import { useAuthStore } from '../../lib/store/authStore';
 import { removeRecipe } from '../../lib/services/savedRecipesService';
 import { getRecipeImageSource } from '../../lib/imageUtils';
+import { useToast } from './ui/Toast';
+import AnimatedScrollView from './ui/AnimatedScrollView';
+import CollapsibleHeader from './ui/CollapsibleHeader';
 
 interface FilterValues {
   searchTerm: string;
@@ -21,19 +24,54 @@ interface FilterValues {
 
 interface FavoriteRecipesProps {
   onRecipeSelect?: (recipeId: string, colorName: string) => void;
+  scrollY?: Animated.Value;
+  headerHeight?: number;
+  searchTerm?: string;
+  onSearchChange?: (text: string) => void;
+  showFilters?: boolean;
+  activeFilters?: { name: string; value: string }[];
+  filteredCount?: number;
+  hasActiveFilters?: boolean;
+  onResetFilters?: () => void;
+  viewMode?: 'grid' | 'list';
+  onViewModeChange?: (mode: 'grid' | 'list') => void;
 }
 
-const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
+const FavoriteRecipes = ({ 
+  onRecipeSelect, 
+  scrollY, 
+  headerHeight, 
+  searchTerm, 
+  onSearchChange, 
+  showFilters = false,
+  activeFilters = [],
+  filteredCount,
+  hasActiveFilters = false,
+  onResetFilters,
+  viewMode = 'grid',
+  onViewModeChange
+}: FavoriteRecipesProps) => {
   const router = useRouter();
-  const { favoriteRecipes, isLoading, error, refreshFavoriteRecipes, isCacheStale } = useSavedRecipesStore();
-  const { recipes, getRecipeColor } = useContentStore();
+  const { favoriteRecipes, isLoading, error: recipesError, refreshFavoriteRecipes, isCacheStale } = useSavedRecipesStore();
+  const { recipes, getRecipeColor, categories } = useContentStore();
   const { session } = useAuthStore();
   const [localLoading, setLocalLoading] = useState(true);
   const [localError, setLocalError] = useState<string | null>(null);
   const [removingRecipeId, setRemovingRecipeId] = useState<string | null>(null);
   const recipeFiltersRef = useRef<{
     resetFilters: () => void;
+    updateSearchTerm?: (term: string) => void;
+    updateSelectedCategories?: (categories: string[]) => void;
+    updateCalorieRange?: (min: number, max: number) => void;
+    updateProteinRange?: (min: number, max: number) => void;
+    updateCarbsRange?: (min: number, max: number) => void;
+    updateFatRange?: (min: number, max: number) => void;
+    open?: () => void;
   }>(null);
+  const localScrollY = useRef(new Animated.Value(0)).current;
+  
+  // Use provided scrollY or local one
+  const activeScrollY = scrollY || localScrollY;
   
   // Max values for filters - define this BEFORE filters state
   const [maxValues, setMaxValues] = useState({
@@ -45,13 +83,34 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
   
   // Filter state - now maxValues is defined before being used
   const [filters, setFilters] = useState({
-    searchTerm: '',
+    searchTerm: searchTerm || '',
     selectedCategories: [] as string[],
     calories: { min: 0, max: maxValues.calories },
     protein: { min: 0, max: maxValues.protein },
     carbs: { min: 0, max: maxValues.carbs },
     fat: { min: 0, max: maxValues.fat }
   });
+
+  // Add a local view mode state if not provided via props
+  const [localViewMode, setLocalViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // Use the prop value if provided, otherwise use local state
+  const activeViewMode = viewMode || localViewMode;
+  const handleViewModeChange = onViewModeChange || setLocalViewMode;
+
+  // Update local filters when searchTerm prop changes
+  useEffect(() => {
+    if (searchTerm !== undefined && searchTerm !== filters.searchTerm) {
+      setFilters(prev => ({ ...prev, searchTerm }));
+      
+      // Update the RecipeFilters component if it's being used
+      if (recipeFiltersRef.current?.updateSearchTerm) {
+        recipeFiltersRef.current.updateSearchTerm(searchTerm);
+      }
+    }
+  }, [searchTerm]);
+
+  const { showToast } = useToast();
 
   useEffect(() => {
     const loadFavorites = async () => {
@@ -69,44 +128,41 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
         return;
       }
       
-      setLocalLoading(true);
+      // Set a shorter loading timeout - we'll show content after this time even if loading isn't complete
+      const loadingTimeout = setTimeout(() => {
+        if (localLoading) {
+          console.log("Loading timeout reached, showing available data");
+          setLocalLoading(false);
+        }
+      }, 1000); // Show whatever we have after 1 second
       
       // Check if user is logged in
       if (!session?.user) {
         console.log("No user session found");
         setLocalError("Du må være logget inn for å se favoritter");
         setLocalLoading(false);
+        clearTimeout(loadingTimeout);
         return;
       }
       
       try {
         console.log("Loading favorite recipes...");
         
-        // Set a shorter timeout to prevent long loading
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Loading timed out")), 5000)
-        );
+        // Start the refresh process but don't wait for it to complete
+        refreshFavoriteRecipes().catch(err => {
+          console.error("Error refreshing favorites:", err);
+          setLocalError(err instanceof Error ? err.message : "Failed to load favorites");
+        });
         
-        // Race between the actual loading and the timeout
-        await Promise.race([
-          refreshFavoriteRecipes(),
-          timeoutPromise
-        ]);
-        
-        // Immediately set loading to false after refresh completes
-        setLocalLoading(false);
-        
-        // Check if we have favorites after refreshing
-        if (favoriteRecipes.length === 0) {
-          console.log("No favorite recipes found after refresh");
-        } else {
-          console.log("Favorite recipes loaded:", favoriteRecipes.length);
-        }
+        // We'll let the timeout handle setting loading to false
       } catch (err) {
         console.error("Error loading favorites:", err);
         setLocalError(err instanceof Error ? err.message : "Failed to load favorites");
         setLocalLoading(false);
+        clearTimeout(loadingTimeout);
       }
+      
+      return () => clearTimeout(loadingTimeout);
     };
     
     loadFavorites();
@@ -193,10 +249,12 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
       const { refreshSavedRecipes } = useSavedRecipesStore.getState();
       refreshSavedRecipes();
       
-      Alert.alert(
-        'Fjernet fra favoritter',
-        'Oppskriften er fjernet fra favorittene dine'
-      );
+      // Show toast instead of alert
+      showToast({
+        type: 'success',
+        title: 'Fjernet fra favoritter',
+        message: 'Oppskriften er fjernet fra favorittene dine'
+      });
     } catch (error: any) {
       console.error('Error removing recipe:', error);
       
@@ -223,16 +281,21 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
         }
       }
       
-      Alert.alert('Feil', errorMessage);
+      // Show error toast instead of alert
+      showToast({
+        type: 'error',
+        title: 'Feil',
+        message: errorMessage
+      });
     } finally {
       setRemovingRecipeId(null);
     }
   };
   
-  // Handle filter changes
-  const handleFilterChange = (newFilters: FilterValues) => {
+  // Add a memoized handler for filter changes
+  const handleFilterChange = useMemo(() => (newFilters: FilterValues) => {
     setFilters(newFilters);
-  };
+  }, []);
   
   // Apply filters to favorite recipes
   const filteredFavorites = useMemo(() => {
@@ -319,6 +382,72 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
     }
   };
 
+  // Add a handler for removing individual filters
+  const handleRemoveFilter = useMemo(() => (filterName: string, filterValue: string) => {
+    // Handle different filter types
+    if (filterName === 'Kategorier') {
+      // Extract category IDs to remove
+      const categoryNames = filterValue.split(', ');
+      const categoryIdsToRemove = categories
+        ?.filter(cat => categoryNames.includes(cat.name))
+        .map(cat => cat._id) || [];
+      
+      // Remove the selected categories
+      setFilters(prev => ({
+        ...prev,
+        selectedCategories: prev.selectedCategories.filter(
+          catId => !categoryIdsToRemove.includes(catId)
+        )
+      }));
+      
+      // Update the RecipeFilters component if it exists
+      if (recipeFiltersRef.current?.updateSelectedCategories) {
+        recipeFiltersRef.current.updateSelectedCategories(
+          filters.selectedCategories.filter(
+            catId => !categoryIdsToRemove.includes(catId)
+          )
+        );
+      }
+    } 
+    // Handle numeric range filters
+    else if (filterName === 'Kalorier') {
+      setFilters(prev => ({
+        ...prev,
+        calories: { min: 0, max: maxValues.calories }
+      }));
+      if (recipeFiltersRef.current?.updateCalorieRange) {
+        recipeFiltersRef.current.updateCalorieRange(0, maxValues.calories);
+      }
+    } 
+    else if (filterName === 'Protein') {
+      setFilters(prev => ({
+        ...prev,
+        protein: { min: 0, max: maxValues.protein }
+      }));
+      if (recipeFiltersRef.current?.updateProteinRange) {
+        recipeFiltersRef.current.updateProteinRange(0, maxValues.protein);
+      }
+    } 
+    else if (filterName === 'Karbohydrater') {
+      setFilters(prev => ({
+        ...prev,
+        carbs: { min: 0, max: maxValues.carbs }
+      }));
+      if (recipeFiltersRef.current?.updateCarbsRange) {
+        recipeFiltersRef.current.updateCarbsRange(0, maxValues.carbs);
+      }
+    } 
+    else if (filterName === 'Fett') {
+      setFilters(prev => ({
+        ...prev,
+        fat: { min: 0, max: maxValues.fat }
+      }));
+      if (recipeFiltersRef.current?.updateFatRange) {
+        recipeFiltersRef.current.updateFatRange(0, maxValues.fat);
+      }
+    }
+  }, [categories, filters.selectedCategories, maxValues]);
+
   // Handle loading state
   if (localLoading && isLoading) {
     return (
@@ -330,8 +459,8 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
   }
 
   // Handle error state
-  if (localError || error) {
-    const errorMessage = localError || error;
+  if (localError || recipesError) {
+    const errorMessage = localError || recipesError;
     const isAuthError = errorMessage?.includes('logget inn') || 
                         errorMessage?.includes('session') || 
                         !session?.user;
@@ -391,57 +520,14 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
 
   return (
     <View className="flex-1">
-      {/* Filter section */}
-      <View className="px-4 mb-4">
-        <RecipeFilters 
-          onFilterChange={handleFilterChange}
-          maxValues={maxValues}
-          ref={recipeFiltersRef}
-        />
-      </View>
-      
-      {/* Active filters display */}
-      {(filters.searchTerm || 
-        filters.selectedCategories.length > 0 || 
-        filters.calories.min > 0 || 
-        filters.calories.max < maxValues.calories || 
-        filters.protein.min > 0 || 
-        filters.protein.max < maxValues.protein || 
-        filters.carbs.min > 0 || 
-        filters.carbs.max < maxValues.carbs || 
-        filters.fat.min > 0 || 
-        filters.fat.max < maxValues.fat) && (
-        <View className="flex-row justify-between items-center px-4 mb-2">
-          <Text className="text-text-secondary">
-            Viser {filteredFavorites.length} av {favoriteRecipes.length} favoritter
-          </Text>
-          <TouchableOpacity 
-            onPress={() => {
-              // Reset filters in parent component
-              setFilters({
-                searchTerm: '',
-                selectedCategories: [],
-                calories: { min: 0, max: maxValues.calories },
-                protein: { min: 0, max: maxValues.protein },
-                carbs: { min: 0, max: maxValues.carbs },
-                fat: { min: 0, max: maxValues.fat }
-              });
-              
-              // Call resetFilters directly on the RecipeFilters component
-              if (recipeFiltersRef.current) {
-                recipeFiltersRef.current.resetFilters();
-              }
-            }}
-            className="bg-gray-200 rounded-lg px-3 py-1"
-          >
-            <Text className="text-gray-600">Tilbakestill filtre</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      
-      {/* Recipe list */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-4 pt-2 space-y-4">
+      <AnimatedScrollView
+        scrollY={activeScrollY}
+        headerHeight={headerHeight}
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Recipe list */}
+        <View className={`px-4 ${activeViewMode === 'grid' ? 'space-y-4' : 'space-y-2'} pb-20`}>
           {filteredFavorites.length === 0 ? (
             <View className="items-center justify-center py-10">
               <Ionicons name="search-outline" size={48} color="#3C3C43" />
@@ -457,7 +543,8 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
               // Extract just the color name without the 'bg-primary-' prefix
               const colorName = bgColorClass.replace('bg-primary-', '');
               
-              return (
+              return activeViewMode === 'grid' ? (
+                // Grid View (existing card layout)
                 <TouchableOpacity
                   key={savedRecipe.id}
                   className={`${bgColorClass} rounded-2xl shadow-sm overflow-hidden`}
@@ -522,11 +609,114 @@ const FavoriteRecipes = ({ onRecipeSelect }: FavoriteRecipesProps) => {
                     )}
                   </View>
                 </TouchableOpacity>
+              ) : (
+                // List View (new compact layout)
+                <TouchableOpacity
+                  key={savedRecipe.id}
+                  className={`${bgColorClass} rounded-lg shadow-sm overflow-hidden flex-row`}
+                  onPress={() => handleRecipeClick(recipe._id)}
+                >
+                  <Image
+                    source={getRecipeImageSource(recipe.image, 100, 100, recipe._id)}
+                    className="w-24 h-24"
+                    resizeMode="cover"
+                  />
+                  
+                  <View className="flex-1 p-3 justify-center">
+                    <Text className="font-heading-serif text-lg text-text-white">{recipe.tittel}</Text>
+                    
+                    <View className="flex-row items-center mt-1">
+                      <Text className="text-text-white text-sm">Kalorier: {recipe.totalKcal || 0} kcal</Text>
+                      <Text className="text-text-white text-sm ml-4">Protein: {recipe.totalMakros?.protein || 0}g</Text>
+                    </View>
+                    
+                    {/* Notes if any (shortened in list view) */}
+                    {savedRecipe.notes && (
+                      <Text className="text-white/80 text-xs mt-1" numberOfLines={1}>
+                        {savedRecipe.notes}
+                      </Text>
+                    )}
+                  </View>
+                  
+                  {/* Favorite button */}
+                  <View className="p-3 justify-center">
+                    <TouchableOpacity
+                      onPress={(e) => unfavoriteRecipe(recipe._id, e)}
+                      disabled={removingRecipeId === recipe._id}
+                      className="bg-white/20 rounded-full p-2"
+                    >
+                      <Ionicons 
+                        name="heart" 
+                        size={20} 
+                        color="#FF6B6B" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
               );
             })
           )}
         </View>
-      </ScrollView>
+      </AnimatedScrollView>
+
+      {/* Hidden RecipeFilters component for the filter drawer */}
+      <View style={{ position: 'absolute', opacity: 0, height: 0, width: 0, overflow: 'hidden' }}>
+        <RecipeFilters 
+          onFilterChange={handleFilterChange}
+          maxValues={maxValues}
+          ref={recipeFiltersRef}
+        />
+      </View>
+
+      {/* Update the CollapsibleHeader component to include the view mode toggle */}
+      <CollapsibleHeader
+        scrollY={activeScrollY}
+        title="Favoritter"
+        searchTerm={filters.searchTerm}
+        onSearchChange={(text) => {
+          setFilters(prev => ({ ...prev, searchTerm: text }));
+          if (recipeFiltersRef.current?.updateSearchTerm) {
+            recipeFiltersRef.current.updateSearchTerm(text);
+          }
+        }}
+        onFilterPress={() => {
+          // Open the filter drawer using the ref
+          if (recipeFiltersRef.current?.open) {
+            recipeFiltersRef.current.open();
+          }
+        }}
+        onResetFilters={() => {
+          // Reset filters in parent component
+          setFilters({
+            searchTerm: '',
+            selectedCategories: [],
+            calories: { min: 0, max: maxValues.calories },
+            protein: { min: 0, max: maxValues.protein },
+            carbs: { min: 0, max: maxValues.carbs },
+            fat: { min: 0, max: maxValues.fat }
+          });
+          
+          // Call resetFilters directly on the RecipeFilters component
+          if (recipeFiltersRef.current) {
+            recipeFiltersRef.current.resetFilters();
+          }
+        }}
+        onRemoveFilter={handleRemoveFilter}
+        viewMode={activeViewMode}
+        onViewModeChange={handleViewModeChange}
+        hasActiveFilters={
+          filters.searchTerm !== '' || 
+          filters.selectedCategories.length > 0 || 
+          filters.calories.min > 0 || 
+          filters.calories.max < maxValues.calories || 
+          filters.protein.min > 0 || 
+          filters.protein.max < maxValues.protein || 
+          filters.carbs.min > 0 || 
+          filters.carbs.max < maxValues.carbs || 
+          filters.fat.min > 0 || 
+          filters.fat.max < maxValues.fat
+        }
+      />
     </View>
   );
 };

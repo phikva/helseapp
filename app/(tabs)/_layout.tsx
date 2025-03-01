@@ -43,11 +43,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Måltidsplanlegger"
+        name="mealplanner"
         options={{
           title: 'Måltidsplan',
           tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={26} color={color} />,
-          href: '/mealplanner',
         }}
       />
       <Tabs.Screen
@@ -55,7 +54,6 @@ export default function TabLayout() {
         options={{
           title: 'Oppskrifter',
           tabBarIcon: ({ color }) => <Ionicons name="book" size={26} color={color} />,
-          href: '/recipes',
         }}
       />
       <Tabs.Screen
@@ -63,7 +61,6 @@ export default function TabLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ color }) => <Ionicons name="person" size={26} color={color} />,
-          href: '/profile',
         }}
       />
     </Tabs>

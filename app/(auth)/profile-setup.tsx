@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@store/authStore';
 import { supabase } from '@lib/supabase';
 import { getDefaultSubscription } from '@lib/services/subscriptionService';
+import SafeArea from '@components/SafeArea';
 
 interface UserProfile {
   full_name: string;
@@ -122,79 +123,81 @@ export default function ProfileSetup() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-background">
-      <View className="px-5 py-40Phil">
-        <Text className="font-heading-serif text-display-small text-primary-Black mb-4">
-          La oss bli litt bedre kjent!
-        </Text>
-        <Text className="font-body text-body-large text-text-secondary mb-8">
-          Fyll inn litt info om deg selv
-        </Text>
-
-        {/* Full Name Input */}
-        <View className="mb-6">
-          <TextInput
-            placeholder="Fullt navn"
-            value={profile.full_name}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, full_name: text }))}
-            className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
-            autoCapitalize="words"
-          />
-        </View>
-
-        {/* Weight Input */}
-        <View className="mb-6">
-          <TextInput
-            placeholder="Vekt (kg)"
-            value={profile.weight}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, weight: text }))}
-            keyboardType="numeric"
-            className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
-            maxLength={3}
-          />
-        </View>
-
-        {/* Height Input */}
-        <View className="mb-6">
-          <TextInput
-            placeholder="Høyde (cm)"
-            value={profile.height}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, height: text }))}
-            keyboardType="numeric"
-            className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
-            maxLength={3}
-          />
-        </View>
-
-        {/* Age Input */}
-        <View className="mb-8">
-          <TextInput
-            placeholder="Alder"
-            value={profile.age}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, age: text }))}
-            keyboardType="numeric"
-            className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
-            maxLength={3}
-          />
-        </View>
-
-        {/* Submit Button */}
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={loading}
-          className="bg-primary-Green py-[18px] rounded-full items-center mb-4"
-        >
-          <Text className="text-text font-heading-medium text-body-large">
-            {loading ? 'Lagrer...' : 'Fortsett'}
+    <SafeArea edges={['top', 'bottom']} backgroundColor="#fff">
+      <ScrollView className="flex-1 bg-background">
+        <View className="px-5 py-40Phil">
+          <Text className="font-heading-serif text-display-small text-primary-Black mb-4">
+            La oss bli litt bedre kjent!
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('/(tabs)')}>
-          <Text className="text-center text-primary-Black text-body-medium">
-            Fyll ut senere
+          <Text className="font-body text-body-large text-text-secondary mb-8">
+            Fyll inn litt info om deg selv
           </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+
+          {/* Full Name Input */}
+          <View className="mb-6">
+            <TextInput
+              placeholder="Fullt navn"
+              value={profile.full_name}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, full_name: text }))}
+              className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
+              autoCapitalize="words"
+            />
+          </View>
+
+          {/* Weight Input */}
+          <View className="mb-6">
+            <TextInput
+              placeholder="Vekt (kg)"
+              value={profile.weight}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, weight: text }))}
+              keyboardType="numeric"
+              className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
+              maxLength={3}
+            />
+          </View>
+
+          {/* Height Input */}
+          <View className="mb-6">
+            <TextInput
+              placeholder="Høyde (cm)"
+              value={profile.height}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, height: text }))}
+              keyboardType="numeric"
+              className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
+              maxLength={3}
+            />
+          </View>
+
+          {/* Age Input */}
+          <View className="mb-8">
+            <TextInput
+              placeholder="Alder"
+              value={profile.age}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, age: text }))}
+              keyboardType="numeric"
+              className="bg-white rounded-2xl py-4 px-5 font-body text-body-large"
+              maxLength={3}
+            />
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={loading}
+            className="bg-primary-Green py-[18px] rounded-full items-center mb-4"
+          >
+            <Text className="text-text font-heading-medium text-body-large">
+              {loading ? 'Lagrer...' : 'Fortsett'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push('/(tabs)')}>
+            <Text className="text-center text-primary-Black text-body-medium">
+              Fyll ut senere
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeArea>
   );
 } 

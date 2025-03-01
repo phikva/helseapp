@@ -18,6 +18,8 @@ type RecipeSelectorProps = {
   initialSelectedCategory?: string;
   mode?: 'select' | 'view';
   showFavoritesTab?: boolean;
+  initialViewMode?: 'grid' | 'list';
+  onViewModeChange?: (mode: 'grid' | 'list') => void;
 };
 
 const RecipeSelector = ({ 
@@ -28,7 +30,9 @@ const RecipeSelector = ({
   hideCategoryFilter = false,
   initialSelectedCategory,
   mode = 'select',
-  showFavoritesTab = true
+  showFavoritesTab = true,
+  initialViewMode = 'list',
+  onViewModeChange
 }: RecipeSelectorProps) => {
   const router = useRouter();
   const { recipes, categories, isLoading: contentLoading, error: contentError, getRecipeColor } = useContentStore();
@@ -37,6 +41,9 @@ const RecipeSelector = ({
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all');
+  
+  // View mode state
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(initialViewMode);
   
   // Recipe drawer state
   const [selectedRecipe, setSelectedRecipe] = useState<{ id: string, color: string } | null>(null);
@@ -108,6 +115,17 @@ const RecipeSelector = ({
       onSelectRecipe(recipe);
     }
     setSelectedRecipe(null);
+  };
+
+  // Toggle view mode between grid and list
+  const toggleViewMode = () => {
+    const newViewMode = viewMode === 'grid' ? 'list' : 'grid';
+    setViewMode(newViewMode);
+    
+    // Notify parent component if callback is provided
+    if (onViewModeChange) {
+      onViewModeChange(newViewMode);
+    }
   };
 
   // Get filtered recipes
@@ -204,6 +222,18 @@ const RecipeSelector = ({
           </TouchableOpacity>
         )}
         <Text style={styles.title}>{title}</Text>
+        
+        {/* View Mode Toggle Button */}
+        <TouchableOpacity 
+          style={styles.viewModeButton}
+          onPress={toggleViewMode}
+        >
+          <Ionicons 
+            name={viewMode === 'grid' ? "list-outline" : "grid-outline"} 
+            size={22} 
+            color={colors.primary.green} 
+          />
+        </TouchableOpacity>
       </View>
       
       {/* Tabs */}
@@ -214,7 +244,7 @@ const RecipeSelector = ({
             onPress={() => setActiveTab('all')}
           >
             <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-              Alle oppskrifter
+              Alle oppskrifter ({filteredRecipes.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -253,6 +283,7 @@ const RecipeSelector = ({
         onRecipePress={handleRecipePress}
         onAddRecipe={handleAddRecipe}
         mode={mode}
+        viewMode={viewMode}
       />
       
       {/* Recipe Drawer */}
@@ -262,7 +293,11 @@ const RecipeSelector = ({
           colorName={selectedRecipe.color}
           visible={!!selectedRecipe}
           onClose={() => setSelectedRecipe(null)}
-          onAddToMealPlan={mode === 'select' ? handleAddRecipe : undefined}
+          showAddButton={mode === 'select'}
+          onAddToMealPlan={recipe => {
+            handleAddRecipe(recipe);
+            setSelectedRecipe(null);
+          }}
         />
       )}
     </SafeAreaView>
@@ -277,25 +312,31 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: colors.background.DEFAULT,
     borderBottomWidth: 1,
-    borderBottomColor: '#EAEAEA',
+    borderBottomColor: colors.border ? colors.border.DEFAULT : colors.primary.light,
   },
   backButton: {
-    padding: 5,
-    marginRight: 10,
+    padding: 8,
   },
   title: {
+    flex: 1,
     fontSize: 18,
-    fontWeight: '600',
-    color: colors.primary.black,
     fontFamily: fonts.heading.serif,
+    color: colors.text.DEFAULT,
+    textAlign: 'center',
+  },
+  viewModeButton: {
+    padding: 8,
   },
   tabContainer: {
     flexDirection: 'row',
+    backgroundColor: colors.background.DEFAULT,
     borderBottomWidth: 1,
-    borderBottomColor: '#EAEAEA',
+    borderBottomColor: colors.border ? colors.border.DEFAULT : colors.primary.light,
   },
   tab: {
     flex: 1,
@@ -308,24 +349,22 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    color: colors.text.secondary,
     fontFamily: fonts.body.medium,
+    color: colors.text.secondary,
   },
   activeTabText: {
     color: colors.primary.green,
-    fontWeight: '500',
   },
   categoryIndicator: {
-    backgroundColor: colors.primary.green + '20',
+    backgroundColor: colors.primary.light,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    alignItems: 'center',
   },
   categoryName: {
-    fontFamily: fonts.heading.serif,
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: fonts.body.medium,
     color: colors.primary.green,
-  }
+  },
 });
 
 export default RecipeSelector; 

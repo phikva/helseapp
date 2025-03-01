@@ -16,6 +16,7 @@ import { getOnboardingConfig } from '../../lib/queries/onboarding';
 import { SanityImageComponent } from '../../components/SanityImage';
 import { Button } from '../../components/ui/Button';
 import { ColorMapping } from '../../hooks/useSvgColor';
+import SafeArea from '@components/SafeArea';
 
 const { width } = Dimensions.get('window');
 
@@ -160,10 +161,14 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <SafeArea 
+      edges={['top', 'bottom']} 
+      backgroundColor="#fff"
+      style={{ paddingTop: -20 }}
+    >
       <View className="flex-1">
         {/* Header navigation */}
-        <View className={`flex-row justify-between items-center ${layout.padding.default} pt-5`}>
+        <View className={`flex-row justify-between items-center ${layout.padding.default} pt-0`}>
           {currentIndex > 0 ? (
             <TouchableOpacity 
               onPress={handleBack}
@@ -246,6 +251,6 @@ export default function OnboardingScreens({ onComplete }: { onComplete: () => vo
           </Button>
         </View>
       </View>
-    </View>
+    </SafeArea>
   );
 } 

@@ -40,6 +40,9 @@ export default function MealPlannerScreen() {
   // Recipe drawer state
   const [selectedRecipe, setSelectedRecipe] = useState<{ id: string, color: string } | null>(null);
   
+  // View mode state for recipe selector
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  
   // Initialize expanded days from stored state
   useEffect(() => {
     setExpandedDays(prev => ({
@@ -156,10 +159,10 @@ export default function MealPlannerScreen() {
     }
     
     // Get color for the recipe
-    const colorName = getRecipeColor(recipeId);
+    const colorName = getRecipeColor(recipeId.toString());
     
     // Open the recipe drawer
-    setSelectedRecipe({ id: recipeId, color: colorName });
+    setSelectedRecipe({ id: recipeId.toString(), color: colorName });
     
     // Save current state for when returning from drawer
     saveCurrentState('mealplanner', currentWeek, selectedDay);
@@ -243,6 +246,8 @@ export default function MealPlannerScreen() {
           onClose={() => setShowRecipeSelector(false)}
           title={`Måltid - ${selectedDay}`}
           mode="select"
+          initialViewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
       )}
       

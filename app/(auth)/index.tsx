@@ -1,8 +1,8 @@
-import { SafeAreaView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import OnboardingScreens from './OnboardingScreens'
+import SafeArea from '@components/SafeArea'
 
 export default function OnboardingScreen() {
   console.log('Rendering OnboardingScreen');
@@ -19,9 +19,12 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" style={{ backgroundColor: '#fff' }}>
+    <SafeArea 
+      edges={['top', 'bottom']} 
+      backgroundColor="#fff"
+    >
       <StatusBar style="dark" />
       <OnboardingScreens onComplete={handleComplete} />
-    </SafeAreaView>
+    </SafeArea>
   )
 } 

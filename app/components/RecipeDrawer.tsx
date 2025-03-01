@@ -22,6 +22,7 @@ import { getRecipeImageSource } from '../../lib/imageUtils';
 import { useAuthStore } from '../../lib/store/authStore';
 import { useSavedRecipesStore } from '../../lib/store/savedRecipesStore';
 import { saveRecipe, removeRecipe } from '../../lib/services/savedRecipesService';
+import { useToast } from './ui/Toast';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DRAWER_HEIGHT = SCREEN_HEIGHT * 0.9;
@@ -65,6 +66,7 @@ interface RecipeDrawerProps {
   visible: boolean;
   onClose: () => void;
   onAddToMealPlan?: (recipe: Recipe) => void;
+  showAddButton?: boolean;
 }
 
 export default function RecipeDrawer({ 
@@ -72,7 +74,8 @@ export default function RecipeDrawer({
   colorName = 'green', 
   visible, 
   onClose,
-  onAddToMealPlan
+  onAddToMealPlan,
+  showAddButton = false
 }: RecipeDrawerProps) {
   const router = useRouter();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -81,6 +84,8 @@ export default function RecipeDrawer({
   const [savingRecipe, setSavingRecipe] = useState(false);
   const { session } = useAuthStore();
   const { savedRecipes, refreshSavedRecipes, refreshFavoriteRecipes } = useSavedRecipesStore();
+  const drawerAnimation = useRef(new Animated.Value(0)).current;
+  const { showToast } = useToast();
   
   // Animation values
   const translateY = useRef(new Animated.Value(DRAWER_HEIGHT)).current;
@@ -191,6 +196,13 @@ export default function RecipeDrawer({
       // Refresh both lists to ensure consistency across the app
       refreshSavedRecipes();
       refreshFavoriteRecipes();
+      
+      // Show toast instead of alert
+      showToast({
+        type: 'success',
+        title: currentlyFavorite ? 'Fjernet fra favoritter' : 'Lagt til i favoritter',
+        message: currentlyFavorite ? 'Oppskriften er fjernet fra favorittene dine' : 'Oppskriften er lagt til i favorittene dine'
+      });
     } catch (error: any) {
       console.error('Error saving recipe:', error);
       
@@ -217,7 +229,12 @@ export default function RecipeDrawer({
         }
       }
       
-      Alert.alert('Feil', errorMessage);
+      // Show error toast instead of alert
+      showToast({
+        type: 'error',
+        title: 'Feil',
+        message: errorMessage
+      });
     } finally {
       setSavingRecipe(false);
     }
@@ -362,8 +379,8 @@ export default function RecipeDrawer({
           )}
         </View>
         
-        {/* Add to Meal Plan button - only show if onAddToMealPlan is provided */}
-        {onAddToMealPlan && recipe && (
+        {/* Add to Meal Plan button - only show if showAddButton is true and onAddToMealPlan is provided */}
+        {showAddButton && onAddToMealPlan && recipe && (
           <View className="px-4 py-3 border-t border-gray-200">
             <TouchableOpacity
               className="bg-primary-green rounded-lg py-3 items-center"

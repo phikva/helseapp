@@ -128,7 +128,7 @@ export const ContentProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // Add this function to generate a consistent color for each recipe
   const getRecipeColor = (recipeId: string): string => {
-    // Array of available color names
+    // Array of available color names (excluding 'light')
     const colors = ['green', 'cyan', 'purple', 'pink', 'blue'];
     
     // Use the recipe ID to deterministically select a color

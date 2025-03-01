@@ -69,7 +69,7 @@ export default function RecipeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light }}>
         <Stack.Screen 
           options={{
             title: 'Oppskrift',
@@ -86,7 +86,7 @@ export default function RecipeScreen() {
 
   if (error || !recipe) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light }}>
         <Stack.Screen 
           options={{
             title: 'Oppskrift',
@@ -110,7 +110,7 @@ export default function RecipeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light, paddingTop: 48 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.primary.light }}>
       <Stack.Screen 
         options={{
           title: recipe.tittel,

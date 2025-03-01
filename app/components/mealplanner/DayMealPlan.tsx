@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, fonts } from '../../../lib/theme';
 import { MealType, Recipe, GENERIC_MEAL_TYPES } from './types';
+import { useContentStore } from '../../../lib/store/contentStore';
+import { getRecipeImageSource } from '../../../lib/imageUtils';
 
 type DayMealPlanProps = {
   day: string;
@@ -23,6 +25,14 @@ const DayMealPlan = ({
   onAddNewMealSlot,
   onViewRecipeDetails
 }: DayMealPlanProps) => {
+  const { getRecipeColor } = useContentStore();
+  
+  // Keep track of the last used color to avoid repeating colors
+  const lastUsedColorRef = useRef<string | null>(null);
+  
+  // Available colors for recipes (excluding 'light')
+  const availableColors = ['green', 'cyan', 'purple', 'pink', 'blue'];
+  
   // Get active meal slots for this day
   const activeMealSlots = Object.keys(meals);
   
@@ -36,6 +46,37 @@ const DayMealPlan = ({
     if (existingNumbers.length === 0) return 1;
     return Math.max(...existingNumbers) + 1;
   };
+  
+  // Function to get a color that's different from the last used one
+  const getUniqueColor = (recipeId: string): string => {
+    if (!recipeId) return availableColors[0];
+    
+    // Get the base color from the recipe ID
+    let baseColor = getRecipeColor(recipeId);
+    
+    // If the color is 'light', replace it with a different color
+    if (baseColor === 'light') {
+      // Find a color that's not 'light' and not the last used color
+      const otherColors = availableColors.filter(c => c !== 'light' && c !== lastUsedColorRef.current);
+      // Use a deterministic approach to select a replacement color
+      const hash = recipeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      baseColor = otherColors[hash % otherColors.length];
+    }
+    
+    // If this color is the same as the last used color, pick a different one
+    if (baseColor === lastUsedColorRef.current && availableColors.length > 1) {
+      // Find colors that are not the last used color
+      const otherColors = availableColors.filter(c => c !== lastUsedColorRef.current);
+      // Use a deterministic approach to select a replacement color
+      const hash = recipeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      baseColor = otherColors[hash % otherColors.length];
+    }
+    
+    // Update the last used color
+    lastUsedColorRef.current = baseColor;
+    
+    return baseColor;
+  };
 
   return (
     <View style={styles.dayContent}>
@@ -44,6 +85,12 @@ const DayMealPlan = ({
           // Use sequential numbering for display (1-based index)
           const displayNumber = index + 1;
           const displayName = `Måltid ${displayNumber}`;
+          
+          // Get recipe and color if available
+          const recipe = meals[mealId];
+          const recipeId = recipe ? (recipe._id || recipe.id || '') : '';
+          const colorName = recipe ? getUniqueColor(recipeId) : '';
+          const bgColor = recipe ? colors.primary[colorName as keyof typeof colors.primary] : '';
           
           return (
             <View key={mealId} style={styles.mealSlot}>
@@ -68,20 +115,34 @@ const DayMealPlan = ({
               {meals[mealId] ? (
                 // Meal is planned - make it clickable to view details
                 <TouchableOpacity 
-                  style={styles.plannedMeal}
+                  style={[styles.plannedMeal, { backgroundColor: bgColor }]}
                   onPress={() => meals[mealId] && onViewRecipeDetails(meals[mealId])}
                   activeOpacity={0.7}
                 >
                   <Image 
-                    source={{ uri: meals[mealId]?.image }} 
+                    source={getRecipeImageSource(recipe?.image, 100, 100, recipeId)} 
                     style={styles.mealImage} 
+                    resizeMode="cover"
                   />
-                  <View style={styles.mealNameContainer}>
+                  <View style={styles.mealInfoContainer}>
                     <Text style={styles.mealName}>
-                      {meals[mealId]?.name || meals[mealId]?.tittel}
+                      {recipe?.name || recipe?.tittel}
                     </Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.text.secondary} />
+                    
+                    {recipe?.totalKcal && (
+                      <View style={styles.nutritionInfo}>
+                        <Text style={styles.nutritionText}>
+                          {Math.round(recipe.totalKcal)} kcal
+                        </Text>
+                        {recipe.totalMakros?.protein && (
+                          <Text style={styles.nutritionText}>
+                            {Math.round(recipe.totalMakros.protein)}g protein
+                          </Text>
+                        )}
+                      </View>
+                    )}
                   </View>
+                  <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
               ) : (
                 // No meal planned yet
@@ -145,11 +206,9 @@ const styles = StyleSheet.create({
   plannedMeal: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.DEFAULT,
     borderRadius: 8,
     padding: 10,
-    borderWidth: 1,
-    borderColor: '#EAEAEA',
+    overflow: 'hidden',
   },
   mealImage: {
     width: 45,
@@ -157,17 +216,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 12,
   },
-  mealNameContainer: {
+  mealInfoContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   mealName: {
-    flex: 1,
     fontSize: 14,
-    color: colors.primary.black,
-    fontFamily: fonts.body.regular,
+    color: '#FFFFFF',
+    fontFamily: fonts.heading.serif,
+    marginBottom: 2,
+  },
+  nutritionInfo: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  nutritionText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
   removeMealButton: {
     padding: 4,
