@@ -27,10 +27,10 @@ interface CollapsibleHeaderProps {
 }
 
 // Base header height without filters
-const BASE_HEADER_HEIGHT = 100;
+const BASE_HEADER_HEIGHT = Platform.OS === 'android' ? 145 : 100;
 const HEADER_SCROLL_DISTANCE = 100;
 // Add padding for filters
-const FILTERS_PADDING = 8;
+const FILTERS_PADDING = Platform.OS === 'android' ? 24 : 8;
 
 export default function CollapsibleHeader({
   title = 'Oppskrifter',
@@ -61,6 +61,7 @@ export default function CollapsibleHeader({
   const isScrolling = useRef(false);
   const scrollTimer = useRef<NodeJS.Timeout | null>(null);
   const previousFiltersHeight = useRef(filtersHeight);
+  const previousTabRef = useRef(activeTab);
   
   // Calculate dynamic header height based on whether filters are active
   const headerHeight = BASE_HEADER_HEIGHT + (hasActiveFilters ? filtersHeight + FILTERS_PADDING : 0);
@@ -87,7 +88,15 @@ export default function CollapsibleHeader({
       duration: 0, // Immediate
       useNativeDriver: true,
     }).start();
-  }, [activeTab]); // Add activeTab as a dependency
+    
+    // Only reset filters when the tab actually changes
+    if (previousTabRef.current !== activeTab && onResetFilters) {
+      onResetFilters();
+    }
+    
+    // Update the previous tab ref
+    previousTabRef.current = activeTab;
+  }, [activeTab, onResetFilters]);
 
   // Track scroll direction and position
   useEffect(() => {
@@ -184,7 +193,7 @@ export default function CollapsibleHeader({
       className="shadow-sm"
     >
       {/* Title Section */}
-      <View className="px-4 pt-0">
+      <View className={`px-4 ${Platform.OS === 'android' ? 'pt-8' : 'pt-0'}`}>
         <Text className="text-4xl font-heading-serif text-primary-black">{title}</Text>
       </View>
       

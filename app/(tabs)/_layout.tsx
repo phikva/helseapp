@@ -43,10 +43,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="mealplanner"
+        name="måltidsplan"
         options={{
-          title: 'Måltidsplan',
-          tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={26} color={color} />,
+          title: 'Måltider',
+          tabBarIcon: ({ color }) => <Ionicons name="restaurant" size={26} color={color} />,
         }}
       />
       <Tabs.Screen

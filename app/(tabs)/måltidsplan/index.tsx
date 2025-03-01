@@ -14,7 +14,7 @@ import { useMealPlannerStore } from '../../../lib/store/mealPlannerStore';
 import RecipeDrawer from '../../components/RecipeDrawer';
 import { useContentStore } from '../../../lib/store/contentStore';
 
-export default function MealPlannerScreen() {
+export default function MåltidsplanScreen() {
   const router = useRouter();
   const { getRecipeColor } = useContentStore();
   
@@ -229,8 +229,8 @@ export default function MealPlannerScreen() {
       
       {/* Header with icon */}
       <Header 
-        title="Måltidsplanlegger" 
-        iconName="restaurant-outline" 
+        title="Måltider" 
+        iconName="restaurant" 
         iconSize={26}
       />
       
