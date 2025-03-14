@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from '@lib/supabase'
 import { useAuthStore } from '@store/authStore'
+import { router } from 'expo-router'
 
 export function useInitAuth() {
   const { setSession, setUser, setIsLoading, setHasProfile } = useAuthStore()
@@ -20,13 +21,18 @@ export function useInitAuth() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state changed:', { event: _event, session })
       setSession(session)
       setUser(session?.user ?? null)
       setIsLoading(false)
 
       // Check if user has profile when auth state changes
       if (session?.user) {
-        checkProfile(session.user.id)
+        const hasProfile = await checkProfile(session.user.id)
+        if (!hasProfile) {
+          console.log('No profile found, redirecting to profile setup')
+          router.replace('/(auth)/profile-setup')
+        }
       } else {
         setHasProfile(null)
       }
@@ -45,12 +51,17 @@ export function useInitAuth() {
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error checking profile:', error)
-        return
+        setHasProfile(false)
+        return false
       }
 
-      setHasProfile(!!data)
+      const hasProfile = !!data
+      setHasProfile(hasProfile)
+      return hasProfile
     } catch (error) {
       console.error('Error checking profile:', error)
+      setHasProfile(false)
+      return false
     }
   }
 } 

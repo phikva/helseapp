@@ -79,8 +79,11 @@ export default function ProfileSetup() {
       return;
     }
 
-    if (!validateProfile()) {
-      return;
+    // Only validate if there's any data entered
+    if (profile.full_name || profile.weight || profile.height || profile.age) {
+      if (!validateProfile()) {
+        return;
+      }
     }
     
     try {
@@ -98,17 +101,21 @@ export default function ProfileSetup() {
         // Continue without subscription if there's an error
       }
       
+      // Only include fields that have values
+      const profileData: any = {
+        id: session.user.id,
+        updated_at: new Date().toISOString()
+      };
+
+      if (profile.full_name) profileData.full_name = profile.full_name.trim();
+      if (profile.weight) profileData.weight = profile.weight;
+      if (profile.height) profileData.height = profile.height;
+      if (profile.age) profileData.age = profile.age;
+      if (subscriptionId) profileData.subscription_id = subscriptionId;
+      
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: session.user.id,
-          full_name: profile.full_name.trim(),
-          weight: profile.weight,
-          height: profile.height,
-          age: profile.age,
-          subscription_id: subscriptionId,
-          updated_at: new Date().toISOString()
-        });
+        .upsert(profileData);
 
       if (error) throw error;
 
@@ -130,7 +137,7 @@ export default function ProfileSetup() {
             La oss bli litt bedre kjent!
           </Text>
           <Text className="font-body text-body-large text-text-secondary mb-8">
-            Fyll inn litt info om deg selv
+            Fyll inn litt info om deg selv, eller hopp over dette for nå
           </Text>
 
           {/* Full Name Input */}
@@ -187,13 +194,19 @@ export default function ProfileSetup() {
             className="bg-primary-Green py-[18px] rounded-full items-center mb-4"
           >
             <Text className="text-text font-heading-medium text-body-large">
-              {loading ? 'Lagrer...' : 'Fortsett'}
+              {loading ? 'Lagrer...' : 'Lagre og fortsett'}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push('/(tabs)')}>
-            <Text className="text-center text-primary-Black text-body-medium">
-              Fyll ut senere
+          <TouchableOpacity 
+            onPress={() => {
+              // Create empty profile and continue
+              handleSave();
+            }}
+            className="py-[18px] items-center"
+          >
+            <Text className="text-primary-Black text-body-medium">
+              Hopp over for nå
             </Text>
           </TouchableOpacity>
         </View>

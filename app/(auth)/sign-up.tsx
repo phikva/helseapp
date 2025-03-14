@@ -208,9 +208,12 @@ export default function SignUpScreen() {
         // New user created successfully
         setFeedbackMessage({
           title: 'Sjekk e-posten din!',
-          message: 'Vi har sendt deg en bekreftelseslink. Klikk på lenken i e-posten for å bekrefte kontoen din, deretter kan du logge inn.',
+          message: 'Vi har sendt deg en bekreftelseslink. Klikk på lenken i e-posten for å bekrefte kontoen din.',
           type: 'success'
         })
+        
+        // Redirect to profile setup after successful signup
+        router.replace('/(auth)/profile-setup')
       }
 
       setShowFeedbackModal(true)
@@ -218,7 +221,6 @@ export default function SignUpScreen() {
     } catch (error) {
       console.error('Error in signUpWithEmail:', error)
       if (error instanceof Error) {
-        // Check if it's a rate limit error
         if (error.message.toLowerCase().includes('rate limit')) {
           setFeedbackMessage({
             title: 'Vent litt',

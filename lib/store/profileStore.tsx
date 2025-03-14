@@ -97,56 +97,61 @@ export const ProfileProvider: React.FC<{ children: ReactNode }> = ({ children })
         .eq('id', session.user.id)
         .single();
 
-      if (profileError) throw profileError;
-      setProfile(profileData);
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+      
+      // Set profile data, even if some fields are empty
+      setProfile(profileData || { id: session.user.id });
 
-      // Fetch dietary requirements
-      const { data: dietaryData, error: dietaryError } = await supabase
-        .from('dietary_requirements')
-        .select('*')
-        .eq('profile_id', session.user.id);
+      // Only fetch additional data if we have a profile
+      if (profileData) {
+        // Fetch dietary requirements
+        const { data: dietaryData, error: dietaryError } = await supabase
+          .from('dietary_requirements')
+          .select('*')
+          .eq('profile_id', session.user.id);
 
-      if (dietaryError) throw dietaryError;
-      setDietaryRequirements(dietaryData || []);
+        if (dietaryError) throw dietaryError;
+        setDietaryRequirements(dietaryData || []);
 
-      // Fetch allergies
-      const { data: allergiesData, error: allergiesError } = await supabase
-        .from('allergies')
-        .select('*')
-        .eq('profile_id', session.user.id);
+        // Fetch allergies
+        const { data: allergiesData, error: allergiesError } = await supabase
+          .from('allergies')
+          .select('*')
+          .eq('profile_id', session.user.id);
 
-      if (allergiesError) throw allergiesError;
-      setAllergies(allergiesData || []);
+        if (allergiesError) throw allergiesError;
+        setAllergies(allergiesData || []);
 
-      // Fetch food preferences
-      const { data: preferencesData, error: preferencesError } = await supabase
-        .from('food_preferences')
-        .select('*')
-        .eq('profile_id', session.user.id)
-        .eq('preference_type', 'cuisine_preference');
+        // Fetch food preferences
+        const { data: preferencesData, error: preferencesError } = await supabase
+          .from('food_preferences')
+          .select('*')
+          .eq('profile_id', session.user.id)
+          .eq('preference_type', 'cuisine_preference');
 
-      if (preferencesError) throw preferencesError;
-      setFoodPreferences(preferencesData || []);
+        if (preferencesError) throw preferencesError;
+        setFoodPreferences(preferencesData || []);
 
-      // Fetch budget settings
-      const { data: budgetData, error: budgetError } = await supabase
-        .from('budget_settings')
-        .select('*')
-        .eq('profile_id', session.user.id)
-        .single();
+        // Fetch budget settings
+        const { data: budgetData, error: budgetError } = await supabase
+          .from('budget_settings')
+          .select('*')
+          .eq('profile_id', session.user.id)
+          .single();
 
-      if (budgetError && budgetError.code !== 'PGRST116') throw budgetError;
-      setBudgetSettings(budgetData || null);
+        if (budgetError && budgetError.code !== 'PGRST116') throw budgetError;
+        setBudgetSettings(budgetData || null);
 
-      // Fetch portion settings
-      const { data: portionData, error: portionError } = await supabase
-        .from('portion_settings')
-        .select('*')
-        .eq('profile_id', session.user.id)
-        .single();
+        // Fetch portion settings
+        const { data: portionData, error: portionError } = await supabase
+          .from('portion_settings')
+          .select('*')
+          .eq('profile_id', session.user.id)
+          .single();
 
-      if (portionError && portionError.code !== 'PGRST116') throw portionError;
-      setPortionSettings(portionData || null);
+        if (portionError && portionError.code !== 'PGRST116') throw portionError;
+        setPortionSettings(portionData || null);
+      }
 
       // Update last fetched timestamp
       setLastFetched(Date.now());

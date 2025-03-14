@@ -191,6 +191,11 @@ async function processAndImportRecipes(recipeFilePath) {
       // Add unique keys to array items
       addKeysToArrays(recipe);
       
+      // Ensure porsjoner field exists
+      if (!recipe.porsjoner) {
+        recipe.porsjoner = 4; // Default to 4 portions if not specified
+      }
+      
       // Check if recipe already exists
       const exists = await recipeExists(recipe.tittel);
       if (exists) {

@@ -7,11 +7,14 @@ import RecipeSkeleton from '../../components/skeleton/RecipeSkeleton';
 import { BackButton } from '../../../components/ui/BackButton';
 import { colors } from '../../../lib/theme';
 import { getRecipeImageSource } from '../../../lib/imageUtils';
+import RecipePortionAdjuster from '../../components/RecipePortionAdjuster';
+import { adjustRecipeForPortions, formatIngredientQuantity } from '../../../lib/utils/recipeUtils';
 
 interface Recipe {
   _id: string;
   tittel: string;
   image: string;
+  porsjoner: number;
   kategorier: Array<{
     _id: string;
     name: string;
@@ -44,6 +47,7 @@ interface Recipe {
 export default function RecipeScreen() {
   const { id, color } = useLocalSearchParams();
   const router = useRouter();
+  const [originalRecipe, setOriginalRecipe] = useState<Recipe | null>(null);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,18 +56,34 @@ export default function RecipeScreen() {
   const accentColor = color ? colors.primary[color as keyof typeof colors.primary] : colors.primary.green;
   
   useEffect(() => {
-    fetchRecipe();
+    if (id) {
+      fetchRecipe();
+    }
   }, [id]);
 
   const fetchRecipe = async () => {
     try {
+      setLoading(true);
       const data = await client.fetch(getRecipeByIdQuery, { id });
-      setRecipe(data);
-      setLoading(false);
+      
+      if (data) {
+        setOriginalRecipe(data);
+        setRecipe(data);
+      } else {
+        setError('Oppskrift ikke funnet');
+      }
     } catch (err) {
-      setError('Kunne ikke laste inn oppskriften');
-      setLoading(false);
       console.error('Error fetching recipe:', err);
+      setError('Kunne ikke hente oppskrift');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePortionsChange = (newPortions: number) => {
+    if (originalRecipe) {
+      const adjustedRecipe = adjustRecipeForPortions(originalRecipe, newPortions);
+      setRecipe(adjustedRecipe);
     }
   };
 
@@ -152,14 +172,20 @@ export default function RecipeScreen() {
             ))}
           </View>
 
+          {/* Portion Adjuster */}
+          <RecipePortionAdjuster 
+            defaultPortions={recipe.porsjoner || 4} 
+            onPortionsChange={handlePortionsChange} 
+          />
+
           {/* Nutritional Info */}
           <View className="bg-white p-4 rounded-2xl mb-6 shadow-sm">
             <Text style={{ color: accentColor }} className="text-xl font-heading-serif mb-2">Næringsinnhold</Text>
-            <Text className="text-text-secondary mb-2">Totalt kalorier: {recipe.totalKcal} kcal</Text>
+            <Text className="text-text-secondary mb-2">Totalt kalorier: {Math.round(recipe.totalKcal)} kcal</Text>
             <View className="flex-row justify-between">
-              <Text className="text-text-secondary">Protein: {recipe.totalMakros.protein}g</Text>
-              <Text className="text-text-secondary">Karbohydrater: {recipe.totalMakros.karbs}g</Text>
-              <Text className="text-text-secondary">Fett: {recipe.totalMakros.fett}g</Text>
+              <Text className="text-text-secondary">Protein: {Math.round(recipe.totalMakros.protein)}g</Text>
+              <Text className="text-text-secondary">Karbohydrater: {Math.round(recipe.totalMakros.karbs)}g</Text>
+              <Text className="text-text-secondary">Fett: {Math.round(recipe.totalMakros.fett)}g</Text>
             </View>
           </View>
 
@@ -176,9 +202,7 @@ export default function RecipeScreen() {
                     )}
                   </View>
                   <Text className="text-text-secondary">
-                    {ingredient.measurement 
-                      ? `${ingredient.measurement.unitQuantity} ${ingredient.measurement.unit}`
-                      : ingredient.mengde}
+                    {formatIngredientQuantity(ingredient)}
                   </Text>
                 </View>
               ))}

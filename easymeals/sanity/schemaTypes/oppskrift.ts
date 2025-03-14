@@ -1,5 +1,6 @@
 import { defineField, defineType } from 'sanity'
 import { RecipeIcon } from './icons'
+import { Rule } from 'sanity'
 
 export default defineType({
   name: 'oppskrift',
@@ -24,6 +25,13 @@ export default defineType({
         metadata: ['exif', 'location', 'lqip', 'palette', 'blurhash'],
       },
       description: 'Hovedbilde for oppskriften (støtter også SVG-filer)',
+    }),
+    defineField({
+      name: 'porsjoner',
+      title: 'Porsjoner',
+      type: 'number',
+      description: 'Antall porsjoner oppskriften er beregnet for',
+      validation: Rule => Rule.required().min(1).integer(),
     }),
     defineField({
       name: 'kategori',
